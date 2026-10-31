@@ -165,3 +165,27 @@ it('estructura y bitácora se revierten juntas al fallar la auditoría',async()=
  expect(sqlite.prepare('SELECT COUNT(*) n FROM course_structure_drafts').get().n).toBe(0);
  expect((await getStructure(env,actor)).revision).toBe(0);
 });
+
+function importSetup(){draftSetup();sqlite.exec(readFileSync('database/migrations/0007_question_imports.sql','utf8'));}
+it('importación previsualiza sin escribir, guarda privados y omite IDs repetidos',async()=>{
+ const {previewImport,commitImport}=await import('../apps/api/src/question-import');importSetup();const actor={id:'alice',role:'admin'};
+ const input={namespace:'local-fixture',items:[{...draftInput,externalId:'q1'},{...draftInput,externalId:'q1'}]};
+ const preview=await previewImport(env,actor,input);expect(preview.rows.map(r=>r.status)).toEqual(['ready','duplicate']);expect(preview.rows[0].warnings).toContain('Sin clave: requiere revisión');
+ expect(sqlite.prepare('SELECT COUNT(*) n FROM question_drafts').get().n).toBe(0);
+ expect(await commitImport(env,actor,input)).toEqual({imported:1,skipped:1});
+ expect(await commitImport(env,actor,input)).toEqual({imported:0,skipped:2});
+ expect(sqlite.prepare('SELECT COUNT(*) n FROM questions').get().n).toBe(6);
+ expect(sqlite.prepare('SELECT COUNT(*) n FROM admin_audit_logs').get().n).toBe(1);
+ await expect(commitImport(env,{id:'bob',role:'student'},input)).rejects.toThrow('No autorizado');
+});
+it('importador bloquea lote con errores y revierte lote completo si falla auditoría',async()=>{
+ const {previewImport,commitImport}=await import('../apps/api/src/question-import');importSetup();const actor={id:'alice',role:'admin'};
+ const item={...draftInput,externalId:'q1'};
+ expect((await previewImport(env,actor,{namespace:'x',items:[{...item,lessonId:'missing'}]})).rows[0].status).toBe('invalid');
+ await expect(commitImport(env,actor,{namespace:'x',items:[item,{...item,externalId:'q2',expected:'99'}]})).rejects.toThrow('Corrige');
+ expect(sqlite.prepare('SELECT COUNT(*) n FROM question_drafts').get().n).toBe(0);
+ sqlite.exec("CREATE TRIGGER fail_import BEFORE INSERT ON admin_audit_logs BEGIN SELECT RAISE(ABORT,'test'); END;");
+ await expect(commitImport(env,actor,{namespace:'x',items:[item]})).rejects.toThrow();
+ expect(sqlite.prepare('SELECT COUNT(*) n FROM question_drafts').get().n).toBe(0);
+ expect(sqlite.prepare('SELECT COUNT(*) n FROM question_import_keys').get().n).toBe(0);
+});

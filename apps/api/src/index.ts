@@ -1,3 +1,4 @@
+import {previewImport,commitImport} from './question-import';
 import {getStructure,saveStructure} from './course-structure';
 import {listDrafts,saveDraft} from './question-drafts';
 import {adminLessons,saveLesson} from './admin';
@@ -32,6 +33,11 @@ export async function handle(request:Request,env:Env):Promise<Response>{
   }
   if(route==='/api/training'&&request.method==='GET'){await requireEntitlement(env,user.id);return json(await outline(env,user.id));}
   if(route==='/api/attempts'&&request.method==='POST'){await requireEntitlement(env,user.id);const body=await bodyJSON(request);return json(await submit(env,user.id,body.questionId,body.answer));}
+  if(['/api/admin/question-import/preview','/api/admin/question-import/commit'].includes(route)&&request.method==='POST'){
+   if(user.role!=='admin')throw new HttpError(403,'No autorizado');
+   const body=await bodyJSON(request,300000);
+   return json(route.endsWith('/preview')?await previewImport(env,user,body):await commitImport(env,user,body));
+  }
   if(route==='/api/admin/course-structure'&&request.method==='GET')return json(await getStructure(env,user));
   if(route==='/api/admin/course-structure'&&request.method==='POST'){
    if(user.role!=='admin')throw new HttpError(403,'No autorizado');

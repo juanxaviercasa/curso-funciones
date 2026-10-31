@@ -25,3 +25,5 @@ button:disabled{box-shadow:none;background:#e0e7f2}
 
 .structure-editor fieldset{border:0;padding:0;min-width:0}.structure-editor input,.structure-editor textarea{display:block;width:100%;padding:12px;font:inherit;border:1px solid #bccfe8;border-radius:6px;margin:8px 0 18px}.structure-module{padding:20px;margin:20px 0;border:1px solid #bccfe8;border-radius:10px;background:#fff}.structure-actions{display:flex;gap:12px;align-items:center;flex-wrap:wrap}.structure-actions h3{margin-right:auto}.structure-actions button{font-size:13px;padding:10px 14px}.structure-lesson{border-top:1px solid #d7e2f2;padding:16px 0}.structure-lesson summary{cursor:pointer;margin-bottom:14px}
 .laboratory-page{padding:40px 0}.laboratory-page>.button{margin-top:24px}.laboratory-page .zenit-lab-header{display:block;padding:0;border:0}.laboratory-page .zenit-lab-root{scroll-margin-top:24px}
+
+.import-text{display:block;width:100%;padding:12px;margin:12px 0;font:inherit;border:1px solid #bccfe8;border-radius:6px}
