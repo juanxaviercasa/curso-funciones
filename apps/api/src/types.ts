@@ -1,7 +1,7 @@
 export interface Env {
  ASSETS:Fetcher; DB:D1Database; APP_ENV:string; PAYMENTS_ENABLED:string;
  PAYMENT_TEST_USER_IDS?:string; APP_ORIGIN?:string; CLERK_SECRET_KEY?:string; CLERK_PUBLISHABLE_KEY?:string;
- MERCADOPAGO_APPLICATION_ID?:string; MERCADOPAGO_ACCESS_TOKEN?:string; MERCADOPAGO_WEBHOOK_SECRET?:string; MERCADOPAGO_COLLECTOR_ID?:string;
+ MERCADOPAGO_PRODUCTION_ACCESS_TOKEN?:string; MERCADOPAGO_APPLICATION_ID?:string; MERCADOPAGO_ACCESS_TOKEN?:string; MERCADOPAGO_WEBHOOK_SECRET?:string; MERCADOPAGO_COLLECTOR_ID?:string;
 }
 export class HttpError extends Error {constructor(public status:number,message:string){super(message);}}
 export const json=(body:unknown,status=200)=>Response.json(body,{status,headers:{'Cache-Control':'no-store'}});

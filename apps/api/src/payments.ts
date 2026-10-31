@@ -113,3 +113,16 @@ export async function webhook(request:Request,env:Env){
  const payment=normalizeOrder(resource,order,env);
  await applyPayment(env,payment,requestId+':'+resource.id+':'+resource.last_updated_date);return {received:true};
 }
+
+// Diagnóstico de catálogo: no crea órdenes ni acredita disponibilidad comercial por sí solo.
+export async function paymentMethodDiagnostic(env:Env,userId:string){
+ if(!env.PAYMENT_TEST_USER_IDS?.split(',').map(x=>x.trim()).includes(userId))throw new HttpError(403,'No autorizado');
+ if(!env.MERCADOPAGO_PRODUCTION_ACCESS_TOKEN)throw new HttpError(503,'Credencial de producción pendiente');
+ let response:Response;
+ try{response=await fetch('https://api.mercadopago.com/v1/payment_methods',{headers:{Authorization:'Bearer '+env.MERCADOPAGO_PRODUCTION_ACCESS_TOKEN},signal:AbortSignal.timeout(10000)});}catch{throw new HttpError(502,'No se pudo consultar el catálogo de Mercado Pago');}
+ if(!response.ok)throw new HttpError(502,'Mercado Pago no autorizó la consulta de medios de pago');
+ const methods=await response.json() as {id:string;status:string;payment_type_id:string;min_allowed_amount:number;max_allowed_amount:number}[];
+ if(!Array.isArray(methods))throw new HttpError(502,'Catálogo no válido');
+ const yape=methods.find(m=>m.id==='yape');
+ return {yape:yape?{status:yape.status,type:yape.payment_type_id,min:yape.min_allowed_amount,max:yape.max_allowed_amount}:null,checkoutVerified:false};
+}

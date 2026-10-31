@@ -1,5 +1,5 @@
 import {it,expect,vi,afterEach} from 'vitest';
-import {reconcile,normalizeOrder,orderBody,checkoutURL,mpFetch,webhook,type Order,type ProviderOrder} from '../apps/api/src/payments';
+import {paymentMethodDiagnostic,reconcile,normalizeOrder,orderBody,checkoutURL,mpFetch,webhook,type Order,type ProviderOrder} from '../apps/api/src/payments';
 import type {Env} from '../apps/api/src/types';
 const order:Order={id:'local1',user_id:'alice',sku:'MSV-FUN-001',currency:'PEN',amount_minor:6700,external_reference:'ref1',provider:'mercadopago'};
 const env={APP_ENV:'staging',PAYMENTS_ENABLED:'sandbox',APP_ORIGIN:'https://example.test',MERCADOPAGO_COLLECTOR_ID:'789',MERCADOPAGO_APPLICATION_ID:'app1',MERCADOPAGO_ACCESS_TOKEN:'test-fixture',MERCADOPAGO_WEBHOOK_SECRET:'fixture-secret'} as Env;
@@ -30,3 +30,5 @@ it.each([false,true])('reconciliacion solo concede acceso con evento firmado pre
  expect(result.status).toBe(signedEvent?'approved':'awaiting_notification');
  expect(batch).toHaveBeenCalledTimes(signedEvent?1:0);
 });
+it('diagnóstico no consulta credenciales reales para usuarios no autorizados',async()=>{const mock=vi.fn();vi.stubGlobal('fetch',mock);await expect(paymentMethodDiagnostic(env,'alice')).rejects.toThrow('No autorizado');expect(mock).not.toHaveBeenCalled();});
+it('diagnóstico devuelve solo catálogo filtrado y nunca la credencial',async()=>{const mock=vi.fn().mockResolvedValue(Response.json([{id:'yape',status:'active',payment_type_id:'bank_transfer',min_allowed_amount:1,max_allowed_amount:2000},{id:'visa',status:'active'}]));vi.stubGlobal('fetch',mock);const result=await paymentMethodDiagnostic({...env,PAYMENT_TEST_USER_IDS:'alice',MERCADOPAGO_PRODUCTION_ACCESS_TOKEN:'private-fixture'},'alice');expect(result).toEqual({yape:{status:'active',type:'bank_transfer',min:1,max:2000},checkoutVerified:false});expect(JSON.stringify(result)).not.toContain('private-fixture');expect(mock.mock.calls[0][1]).not.toHaveProperty('body');});
