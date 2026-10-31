@@ -132,7 +132,8 @@ export async function productionCheckoutPreview(env:Env,userId:string,key:unknow
  if(!env.PAYMENT_TEST_USER_IDS?.split(',').map(x=>x.trim()).includes(userId))throw new HttpError(403,'No autorizado');
  if(env.PRODUCTION_CHECKOUT_PREVIEW!=='enabled'||!env.MERCADOPAGO_PRODUCTION_ACCESS_TOKEN||!env.APP_ORIGIN)throw new HttpError(503,'Verificación de checkout real pendiente de autorización');
  if(typeof key!=='string'||!/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(key))throw new HttpError(400,'Se requiere Idempotency-Key UUID');
- const auditId='checkout-preview:'+userId+':'+key;
+ const previous=await env.DB.prepare("SELECT id FROM admin_audit_logs WHERE actor_id=? AND action='production_checkout_preview' ORDER BY created_at LIMIT 1").bind(userId).first<{id:string}>();
+ const auditId=previous?.id||'checkout-preview:'+userId+':'+key;
  await env.DB.prepare("INSERT INTO admin_audit_logs(id,actor_id,action,resource_id,context_json) VALUES(?,?,'production_checkout_preview',?,'{}') ON CONFLICT(id) DO NOTHING").bind(auditId,userId,crypto.randomUUID()).run();
  const audit=await env.DB.prepare('SELECT resource_id FROM admin_audit_logs WHERE id=? AND actor_id=?').bind(auditId,userId).first<{resource_id:string}>();
  if(!audit)throw new HttpError(500,'No se pudo registrar la verificación');
