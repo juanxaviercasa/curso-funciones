@@ -19,7 +19,7 @@ export async function handle(request:Request,env:Env):Promise<Response>{
   if(route==='/api/me'&&request.method==='GET'){
    const rights=await env.DB.prepare('SELECT sku FROM entitlements WHERE user_id=? AND active=1 GROUP BY sku').bind(user.id).all();
    const orders=await env.DB.prepare('SELECT id,status,amount_minor,currency,created_at FROM orders WHERE user_id=? ORDER BY created_at DESC LIMIT 20').bind(user.id).all();
-   return json({role:user.role,entitlements:rights.results,orders:orders.results,sandboxCheckout:env.APP_ENV!=='production'&&env.PAYMENTS_ENABLED==='sandbox'&&Boolean(env.PAYMENT_TEST_USER_IDS?.split(',').map(x=>x.trim()).includes(user.id))});
+   return json({role:user.role,entitlements:rights.results,orders:orders.results,productionPreview:env.PRODUCTION_CHECKOUT_PREVIEW==='enabled'&&Boolean(env.PAYMENT_TEST_USER_IDS?.split(',').map(x=>x.trim()).includes(user.id)),sandboxCheckout:env.APP_ENV!=='production'&&env.PAYMENTS_ENABLED==='sandbox'&&Boolean(env.PAYMENT_TEST_USER_IDS?.split(',').map(x=>x.trim()).includes(user.id))});
   }
   if(route==='/api/checkout/mercadopago'&&request.method==='POST')return json(await checkout(env,user.id,request.headers.get('Idempotency-Key')));
   if(route.startsWith('/api/orders/')&&route.endsWith('/reconcile')&&request.method==='POST'){
