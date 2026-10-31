@@ -56,3 +56,6 @@ Tarea concreta, dependencia y criterios de aceptación.
 `python scripts/inventory-local-sources.py --sources-root "C:\ruta\a\carpeta-con-fuentes"`
 
 Busca las carpetas hermanas `funciones` y `api_reverse`. Sin argumento utiliza `Music` dentro del directorio del usuario. Genera `.local-sources/summary.json` y `.local-sources/pdf-inventory.json`, excluidos de Git. Lee CSV y calcula SHA-256 de PDF sin ejecutar descargadores ni consultar sitios externos. Compartir en la entrega únicamente el resumen pertinente; los manifiestos detallados se conservan localmente para comparar recursos cuando se transfieran.
+
+## Distribución vigente
+Leer [asignación entre laptops](work-assignments.md) antes de crear tareas. Define los frentes A/B, rutas reservadas y el contrato inicial de FunctionsLab.
