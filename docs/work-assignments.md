@@ -42,3 +42,6 @@ Informe de B integrado como contexto. No se afirma que sus laboratorios ya hayan
 
 ## Nueva tarea B
 Después de la entrega lineal 7b3e25f, desarrollar QuadraticLab conforme a docs/handoffs/labs-b-next-quadratic.md. B confirma inicio en su propia entrega. A mantiene las rutas de integración.
+
+## Siguiente tarea tras QuadraticLab
+B: laboratorio de dominio/rango de raíz cuadrada. Ver docs/handoffs/labs-b-next-domain.md. A conserva integración y administración.
