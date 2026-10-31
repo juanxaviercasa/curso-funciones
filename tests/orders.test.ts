@@ -36,3 +36,12 @@ it('checkout real de inspección permanece cerrado sin autorización explícita'
 it('checkout real de inspección rechaza otros alumnos',async()=>{await expect(productionCheckoutPreview({...env,PRODUCTION_CHECKOUT_PREVIEW:'enabled',PAYMENT_TEST_USER_IDS:'alice'},'bob',crypto.randomUUID())).rejects.toThrow('No autorizado');});
 it('rechazo del proveedor registra solo códigos seguros sin cuerpo privado',async()=>{const warn=vi.spyOn(console,'warn').mockImplementation(()=>{});vi.stubGlobal('fetch',vi.fn().mockResolvedValue(Response.json({error:'invalid_request',message:'private-fixture'},{status:400})));await expect(mpFetch(env,'/v1/orders')).rejects.toThrow('HTTP 400, código invalid_request');expect(JSON.stringify(warn.mock.calls)).not.toContain('private-fixture');warn.mockRestore();});
 it('rechaza respuestas exitosas que no contienen JSON',async()=>{vi.stubGlobal('fetch',vi.fn().mockResolvedValue(new Response('<html>gateway</html>')));await expect(mpFetch(env,'/v1/orders')).rejects.toThrow('respuesta no válida');});
+
+it('inspección real usa una referencia admitida y conserva la idempotencia',async()=>{
+ const stable='98df761c-6c6c-4963-a26c-ab5181fa6519';
+ const db={prepare:(sql:string)=>({bind:()=>({first:async()=>sql.includes('SELECT id')?{id:'audit-existing'}:{resource_id:stable},run:async()=>({success:true})})})};
+ const mock=vi.fn().mockImplementation(async(_url,init)=>{const body=JSON.parse(init.body);expect(body.external_reference).toMatch(/^[a-zA-Z0-9_-]{1,64}$/);expect(init.headers.get('X-Idempotency-Key')).toBe(stable);return Response.json({...resource,id:'ORD0000000000123',user_id:'291342046',integration_data:{application_id:'2136866391679868'},external_reference:body.external_reference,checkout_url:'https://www.mercadopago.com.pe/checkout/v1/redirect?order_id=ORD0000000000123'});});
+ vi.stubGlobal('fetch',mock);
+ const result=await productionCheckoutPreview({...env,DB:db as unknown as D1Database,PRODUCTION_CHECKOUT_PREVIEW:'enabled',PAYMENT_TEST_USER_IDS:'alice',MERCADOPAGO_PRODUCTION_ACCESS_TOKEN:'fixture'},'alice',crypto.randomUUID());
+ expect(result.inspectionOnly).toBe(true);expect(mock).toHaveBeenCalledTimes(1);
+});
