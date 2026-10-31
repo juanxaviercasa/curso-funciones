@@ -68,11 +68,12 @@ export interface ProviderOrder {
  integration_data:{application_id:string};items:{external_code:string;quantity:number;unit_price:string}[];
  transactions?:{payments?:{status:string;status_detail:string;amount:string;paid_amount:string}[];refunds?:{status:string;amount:string}[];chargebacks?:unknown[]};
 }
+function isCourseAmount(value:unknown){return typeof value==='string' && /^67(?:\.0{1,2})?$/.test(value);}
 export function normalizeOrder(r:ProviderOrder,order:Order,env:Env):Payment{
- if(!/^ORDTST[A-Z0-9]{10,64}$/.test(r.id)||r.type!=='online'||r.processing_mode!=='manual'||r.currency!=='PEN'||r.country_code!=='PER'||String(r.user_id)!==env.MERCADOPAGO_COLLECTOR_ID||String(r.integration_data?.application_id)!==env.MERCADOPAGO_APPLICATION_ID||r.external_reference!==order.external_reference||r.total_amount!=='67.00'||(order.provider_order_id&&order.provider_order_id!==r.id))throw new HttpError(422,'Order no corresponde a esta compra de prueba');
- if(!Array.isArray(r.items)||r.items.length!==1||r.items[0].external_code!==PRODUCT.sku||r.items[0].quantity!==1||r.items[0].unit_price!=='67.00')throw new HttpError(422,'Producto incorrecto');
+ if(!/^ORDTST[A-Z0-9]{10,64}$/.test(r.id)||r.type!=='online'||r.processing_mode!=='manual'||r.currency!=='PEN'||r.country_code!=='PER'||String(r.user_id)!==env.MERCADOPAGO_COLLECTOR_ID||String(r.integration_data?.application_id)!==env.MERCADOPAGO_APPLICATION_ID||r.external_reference!==order.external_reference||!isCourseAmount(r.total_amount)||(order.provider_order_id&&order.provider_order_id!==r.id))throw new HttpError(422,'Order no corresponde a esta compra de prueba');
+ if(!Array.isArray(r.items)||r.items.length!==1||r.items[0].external_code!==PRODUCT.sku||r.items[0].quantity!==1||!isCourseAmount(r.items[0].unit_price))throw new HttpError(422,'Producto incorrecto');
  const tx=r.transactions;const refunded=r.status==='refunded'||r.status_detail==='partially_refunded'||Boolean(tx?.refunds?.some(x=>x.status==='processed'))||Boolean(tx?.chargebacks?.length);
- const accredited=r.status==='processed'&&r.status_detail==='accredited'&&r.total_paid_amount==='67.00'&&tx?.payments?.length===1&&tx.payments[0].status==='processed'&&tx.payments[0].status_detail==='accredited'&&tx.payments[0].amount==='67.00'&&tx.payments[0].paid_amount==='67.00';
+ const accredited=r.status==='processed'&&r.status_detail==='accredited'&&isCourseAmount(r.total_paid_amount)&&tx?.payments?.length===1&&tx.payments[0].status==='processed'&&tx.payments[0].status_detail==='accredited'&&isCourseAmount(tx.payments[0].amount)&&isCourseAmount(tx.payments[0].paid_amount);
  return {id:r.id,status:refunded?'refunded':r.status==='canceled'?'cancelled':accredited?'approved':'pending',transaction_amount:67,currency_id:r.currency,collector_id:r.user_id,external_reference:r.external_reference,live_mode:false,date_last_updated:r.last_updated_date,additional_info:{items:[{id:PRODUCT.sku,quantity:1}]}};
 }
 export async function reconcile(env:Env,userId:string,localId:string){
