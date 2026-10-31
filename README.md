@@ -10,6 +10,8 @@ Yape aparece en checkout como invitado. Los intentos del propietario fueron rech
 Cinco lecciones de texto y seis ejercicios privados con autocorrección y progreso. Resumen de lecciones, ejercicios resueltos e intentos por alumno y enlace para continuar. Videos pendientes. Clerk aún usa instancia de desarrollo. No es un lanzamiento comercial completo.
 
 ## Desarrollo
+
+Para colaborar desde varias máquinas, leer [coordinación del equipo](docs/team-workflow.md) y las entregas en `docs/handoffs/` antes de implementar. Las fuentes locales disponibles y pendientes de esta PC están en [la revisión de recursos](docs/handoffs/2026-10-31-fuentes-pc-music.md).
 Requiere Node 22+ (24 recomendado).
 
 1. npm ci

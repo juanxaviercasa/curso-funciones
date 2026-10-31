@@ -14,6 +14,7 @@ Base: Cursos_Matematica, React/Vite + Worker/D1 + Clerk + Mercado Pago Orders. A
 Etapas 1 y editor de texto de etapa 2. No incluye creación de cursos, editor de ejercicios ni carga de videos. Modelo comercial sigue limitado al SKU inicial; ampliarlo con migración revisada antes de vender otros cursos.
 
 ## Fuentes inventariadas
+- Fuentes de esta PC (`funciones` y `api_reverse`): revisión, límites y próximos pasos en [entrega local](handoffs/2026-10-31-fuentes-pc-music.md). Coordinación entre máquinas en [flujo de equipo](team-workflow.md). Inventario offline: `python scripts/inventory-local-sources.py`.
 - academia-zenit: patrones de aula, reproductor y navegación por capítulos. Se adapta la experiencia a React/Vite; no se incorpora Mux/Stripe ni Prisma.
 - profesor-matematica: laboratorios gráficos candidatos. Evaluación premium requiere reglas privadas en servidor.
 - Rumbo_SanMarcos: referencia para editor de preguntas e importaciones; revisar datos de demostración y autorización antes de trasladar.
