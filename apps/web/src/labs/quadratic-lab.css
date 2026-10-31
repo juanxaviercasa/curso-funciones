@@ -1,0 +1,28 @@
+.zenit-lab-quadratic-root { box-sizing: border-box; color: #173256; background: #fff; border: 1px solid #cad6e4; border-radius: 20px; padding: clamp(16px, 4vw, 32px); width: 100%; max-width: 960px; margin-inline: auto; font-family: system-ui, sans-serif; line-height: 1.6; }
+.zenit-lab-quadratic-header { display: block; margin-bottom: 24px; padding: 0; border: 0; }
+.zenit-lab-quadratic-eyebrow { color: #864000; font-weight: 700; margin: 0 0 6px; }
+.zenit-lab-quadratic-heading { font-size: clamp(1.4rem, 3vw, 2rem); line-height: 1.25; margin: 0 0 12px; }
+.zenit-lab-quadratic-intro { margin: 0; }
+.zenit-lab-quadratic-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); gap: 28px; align-items: start; }
+.zenit-lab-quadratic-controls { min-width: 0; }
+.zenit-lab-quadratic-formula { background: #edf4fc; border-left: 4px solid #c65500; border-radius: 8px; padding: 14px; margin: 0 0 20px; font-size: clamp(1rem, 2.5vw, 1.3rem); font-weight: 750; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.zenit-lab-quadratic-label { display: block; font-weight: 700; margin-top: 14px; }
+.zenit-lab-quadratic-slider { box-sizing: border-box; display: block; width: 100%; min-height: 44px; margin: 0; padding: 0; accent-color: #18539a; cursor: pointer; }
+.zenit-lab-quadratic-help, .zenit-lab-quadratic-caption { font-size: .875rem; color: #465972; }
+.zenit-lab-quadratic-domain { background: #edf4fc; padding: 12px; border-radius: 8px; }
+.zenit-lab-quadratic-reset { display: inline-block; font: inherit; font-weight: 650; min-height: 44px; padding: 9px 16px; border: 1px solid #173256; border-radius: 8px; color: #173256; background: #fff3cd; box-shadow: none; cursor: pointer; }
+.zenit-lab-quadratic-reset:hover { background: #ffe59a; }
+.zenit-lab-quadratic-reset:focus-visible, .zenit-lab-quadratic-slider:focus-visible { outline: 3px solid #18539a; outline-offset: 4px; }
+.zenit-lab-quadratic-figure { min-width: 0; margin: 0; }
+.zenit-lab-quadratic-graph { display: block; width: 100%; height: auto; background: #f8fafd; border-radius: 12px; }
+.zenit-lab-quadratic-grid { stroke: #d7e0ec; stroke-width: 1; }
+.zenit-lab-quadratic-axis { stroke: #536981; stroke-width: 1.5; }
+.zenit-lab-quadratic-tick { fill: #465972; font-size: 12px; }
+.zenit-lab-quadratic-axis-label { fill: #173256; font-size: 14px; font-weight: 700; }
+.zenit-lab-quadratic-symmetry { stroke: #18539a; stroke-width: 1.5; stroke-dasharray: 5 5; }
+.zenit-lab-quadratic-curve { fill: none; stroke: #b54a00; stroke-width: 3; stroke-linejoin: round; stroke-linecap: round; }
+.zenit-lab-quadratic-vertex { fill: #173256; stroke: #fff; stroke-width: 2; }
+.zenit-lab-quadratic-table { width: 100%; border-collapse: collapse; margin-top: 20px; font-variant-numeric: tabular-nums; table-layout: fixed; }
+.zenit-lab-quadratic-table-caption { text-align: left; font-weight: 700; margin-bottom: 8px; }
+.zenit-lab-quadratic-cell { padding: 8px 2px; text-align: center; border: 1px solid #cad6e4; overflow-wrap: anywhere; }
+@media (max-width: 620px) { .zenit-lab-quadratic-layout { grid-template-columns: minmax(0, 1fr); gap: 16px; } }
