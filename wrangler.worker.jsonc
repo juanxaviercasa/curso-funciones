@@ -1,0 +1,32 @@
+{
+  "name": "msv-fun-001-local",
+  "main": "apps/api/src/index.ts",
+  "compatibility_date": "2026-10-30",
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": true
+  },
+  "vars": {
+    "APP_ENV": "development",
+    "PAYMENTS_ENABLED": "false"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "msv-local",
+      "database_id": "00000000-0000-0000-0000-000000000000",
+      "migrations_dir": "database/migrations"
+    }
+  ],
+  "env": {
+    "staging": {
+      "name": "msv-fun-001-staging",
+      "vars": {
+        "APP_ENV": "staging",
+        "PAYMENTS_ENABLED": "false"
+      }
+    }
+  }
+}

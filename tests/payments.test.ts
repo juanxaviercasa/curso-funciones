@@ -1,0 +1,15 @@
+import {it,expect,describe} from 'vitest';
+import {validatePayment,preferenceBody,verifySignature,testPaymentConfig,type Order,type Payment} from '../apps/api/src/payments';
+const order:Order={id:'order1',user_id:'alice',sku:'MSV-FUN-001',currency:'PEN',amount_minor:6700,external_reference:'ref1',provider:'mercadopago'};
+const payment:Payment={id:123,status:'approved',transaction_amount:67,currency_id:'PEN',collector_id:789,external_reference:'ref1',live_mode:false,date_last_updated:'2026-10-30T12:00:00Z',additional_info:{items:[{id:'MSV-FUN-001',quantity:1}]}};
+describe('contrato de pagos',()=>{
+ it('convierte céntimos a soles en la preferencia',()=>expect(preferenceBody(order,'https://test.example').items[0].unit_price).toBe(67));
+ it('aprueba solo el pago esperado',()=>expect(validatePayment(payment,order,'789').status).toBe('approved'));
+ it.each(['pending','in_process','authorized','rejected','in_mediation'])('no concede por estado %s',status=>expect(validatePayment({...payment,status},order,'789').status).toBe('pending'));
+ it.each(['refunded','charged_back','cancelled'])('revoca por %s',status=>expect(validatePayment({...payment,status},order,'789').status).toBe('revoked'));
+ it('revoca también devolución parcial',()=>expect(validatePayment({...payment,transaction_amount_refunded:1},order,'789').status).toBe('revoked'));
+ it.each([{transaction_amount:1},{currency_id:'USD'},{collector_id:123},{external_reference:'other'},{live_mode:true},{date_last_updated:'bad'},{additional_info:{items:[{id:'other',quantity:1}]}}])('rechaza pago que no corresponde %s',patch=>expect(()=>validatePayment({...payment,...patch},order,'789')).toThrow());
+ it('prohíbe activar producción con la base actual',()=>expect(()=>testPaymentConfig({APP_ENV:'production',PAYMENTS_ENABLED:'sandbox'} as Parameters<typeof testPaymentConfig>[0])).toThrow());
+ it('rechaza firma falsa',async()=>{const r=new Request('https://test.example/api/webhooks/mercadopago?data.id=123&type=payment',{headers:{'x-signature':'ts='+Date.now()+',v1='+'0'.repeat(64),'x-request-id':'request-1'}});await expect(verifySignature(r,'test-only')).rejects.toThrow();});
+ it('valida HMAC e impide reutilizarlo para otro recurso',async()=>{const now=Date.now(),ts=String(now),enc=new TextEncoder();const key=await crypto.subtle.importKey('raw',enc.encode('test-only'),{name:'HMAC',hash:'SHA-256'},false,['sign']);const signed=new Uint8Array(await crypto.subtle.sign('HMAC',key,enc.encode('id:123;request-id:request-1;ts:'+ts+';')));const hex=Array.from(signed,b=>b.toString(16).padStart(2,'0')).join('');const headers={'x-signature':'ts='+ts+',v1='+hex,'x-request-id':'request-1'};expect((await verifySignature(new Request('https://test.example/hook?data.id=123',{headers}),'test-only',now)).id).toBe('123');await expect(verifySignature(new Request('https://test.example/hook?data.id=999',{headers}),'test-only',now)).rejects.toThrow();await expect(verifySignature(new Request('https://test.example/hook?data.id=123',{headers}),'test-only',now+300001)).rejects.toThrow();});
+});

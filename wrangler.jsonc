@@ -1,0 +1,17 @@
+{
+  "name": "sistema-zenit-funciones",
+  "pages_build_output_dir": "./dist",
+  "compatibility_date": "2026-10-30",
+  "vars": {
+    "APP_ENV": "staging",
+    "PAYMENTS_ENABLED": "false"
+  },
+  "env": {
+    "preview": {
+      "vars": {
+        "APP_ENV": "staging",
+        "PAYMENTS_ENABLED": "false"
+      }
+    }
+  }
+}

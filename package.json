@@ -1,0 +1,37 @@
+{
+  "name": "msv-fun-001",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "build": "vite build",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --root .",
+    "check": "npm run typecheck && npm test && npm run build",
+    "db:migrate:local": "wrangler d1 migrations apply msv-local --local --config wrangler.worker.jsonc",
+    "dev:worker": "npm run build && wrangler dev --config wrangler.worker.jsonc",
+    "deploy:staging": "npm run check && wrangler deploy --env staging --config wrangler.worker.jsonc",
+    "dev:pages": "npm run build && wrangler pages dev dist",
+    "check:pages": "wrangler pages functions build --outdir .wrangler/pages-check"
+  },
+  "dependencies": {
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "@clerk/react": "latest",
+    "@clerk/backend": "latest"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "@cloudflare/workers-types": "latest",
+    "@vitejs/plugin-react": "latest",
+    "vite": "latest",
+    "typescript": "^5.9.0",
+    "vitest": "latest",
+    "wrangler": "latest"
+  }
+}
