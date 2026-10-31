@@ -1,3 +1,4 @@
+import {getStructure,saveStructure} from './course-structure';
 import {listDrafts,saveDraft} from './question-drafts';
 import {adminLessons,saveLesson} from './admin';
 import {PRODUCT} from '../../../packages/shared/product';
@@ -31,6 +32,11 @@ export async function handle(request:Request,env:Env):Promise<Response>{
   }
   if(route==='/api/training'&&request.method==='GET'){await requireEntitlement(env,user.id);return json(await outline(env,user.id));}
   if(route==='/api/attempts'&&request.method==='POST'){await requireEntitlement(env,user.id);const body=await bodyJSON(request);return json(await submit(env,user.id,body.questionId,body.answer));}
+  if(route==='/api/admin/course-structure'&&request.method==='GET')return json(await getStructure(env,user));
+  if(route==='/api/admin/course-structure'&&request.method==='POST'){
+   if(user.role!=='admin')throw new HttpError(403,'No autorizado');
+   return json(await saveStructure(env,user,await bodyJSON(request,1500000)));
+  }
   if(route==='/api/admin/question-drafts'&&request.method==='GET')return json(await listDrafts(env,user));
   if(route==='/api/admin/question-drafts'&&request.method==='POST'){
    if(user.role!=='admin')throw new HttpError(403,'No autorizado');

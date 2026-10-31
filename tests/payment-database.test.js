@@ -131,3 +131,37 @@ it('fallo de auditoría revierte la creación del borrador',async()=>{
  await expect(saveDraft(env,{id:'alice',role:'admin'},draftInput)).rejects.toThrow();
  expect(sqlite.prepare('SELECT COUNT(*) n FROM question_drafts').get().n).toBe(0);
 });
+
+function structureSetup(){sqlite.exec(readFileSync('database/migrations/0002_training.sql','utf8'));sqlite.exec(readFileSync('database/migrations/0006_course_structure_drafts.sql','utf8'));}
+it('estructura privada crea módulos y lecciones, conserva orden y no modifica el aula',async()=>{
+ const {getStructure,saveStructure}=await import('../apps/api/src/course-structure');structureSetup();const actor={id:'alice',role:'admin'};
+ const published=await outline(env,'bob');const original=await getStructure(env,actor);expect(original.revision).toBe(0);expect(original.modules.length).toBe(5);
+ const modules=[{id:'new-module',title:'Módulo nuevo',lessons:[{id:'new-lesson',title:'Lección nueva',body:''}]},...original.modules.slice().reverse()];
+ expect(await saveStructure(env,actor,{revision:0,modules})).toEqual({revision:1});
+ expect((await getStructure(env,actor)).modules).toEqual(modules);
+ expect(await outline(env,'bob')).toEqual(published);
+ expect(sqlite.prepare('SELECT COUNT(*) n FROM lessons').get().n).toBe(5);
+ await expect(getStructure(env,{id:'bob',role:'student'})).rejects.toThrow('No autorizado');
+ await expect(saveStructure(env,{id:'bob',role:'student'},{revision:1,modules})).rejects.toThrow('No autorizado');
+});
+it('estructura rechaza IDs repetidos, títulos vacíos, exceso de módulos y edición desactualizada',async()=>{
+ const {getStructure,saveStructure,validateStructure}=await import('../apps/api/src/course-structure');structureSetup();const actor={id:'alice',role:'admin'};
+ const initial=await getStructure(env,actor);
+ expect(()=>validateStructure([{id:'same',title:'A',lessons:[{id:'same',title:'B',body:''}]}])).toThrow('repetido');
+ expect(()=>validateStructure([{id:'a',title:' ',lessons:[]}])).toThrow('títulos');
+ expect(()=>validateStructure(Array.from({length:31},(_,i)=>({id:'m'+i,title:'M',lessons:[]})))).toThrow('30');
+ await saveStructure(env,actor,initial);
+ await expect(saveStructure(env,actor,initial)).rejects.toThrow('Otra edición');
+ const current=await getStructure(env,actor);current.modules.reverse();
+ await saveStructure(env,actor,current);
+ await expect(saveStructure(env,actor,current)).rejects.toThrow('Otra edición');
+ expect(sqlite.prepare('SELECT COUNT(*) n FROM admin_audit_logs').get().n).toBe(2);
+});
+it('estructura y bitácora se revierten juntas al fallar la auditoría',async()=>{
+ const {getStructure,saveStructure}=await import('../apps/api/src/course-structure');structureSetup();const actor={id:'alice',role:'admin'};
+ const initial=await getStructure(env,actor);
+ sqlite.exec("CREATE TRIGGER fail_structure_audit BEFORE INSERT ON admin_audit_logs BEGIN SELECT RAISE(ABORT,'test'); END;");
+ await expect(saveStructure(env,actor,initial)).rejects.toThrow();
+ expect(sqlite.prepare('SELECT COUNT(*) n FROM course_structure_drafts').get().n).toBe(0);
+ expect((await getStructure(env,actor)).revision).toBe(0);
+});
