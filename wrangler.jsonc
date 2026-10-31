@@ -4,9 +4,11 @@
   "compatibility_date": "2026-10-30",
   "vars": {
     "APP_ENV": "staging",
-    "PAYMENTS_ENABLED": "false",
+    "PAYMENTS_ENABLED": "sandbox",
     "APP_ORIGIN": "https://funcionesdesdecero.sistemazenit.com",
-    "MERCADOPAGO_APPLICATION_ID": "2136866391679868",
+    "MERCADOPAGO_APPLICATION_ID": "2791232750953301",
+    "MERCADOPAGO_COLLECTOR_ID": "3765983297",
+    "PAYMENT_TEST_USER_IDS": "8645cf99-8128-4362-aaad-9d45b0682652",
     "CLERK_PUBLISHABLE_KEY": "pk_test_YmV0dGVyLWNvbmRvci0xNTAzLmNsZXJrLmFjY291bnRzLmRldiQ"
   },
   "env": {
