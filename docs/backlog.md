@@ -25,3 +25,9 @@
 
 ## Pagos: decisión vigente del propietario
 Continuar el proyecto sin repetir autopagos. No migrar de API solo para simular Yape. No afirmar validación integral de Yape ni de acceso por pago real. No habilitar venta pública automáticamente.
+
+## Aula y editor inicial — 31 octubre 2026
+- Implementados: aula de una lección a la vez, navegación, teoría/práctica y avance real; vista de muestra /vista-previa/aula con dos lecciones sintéticas y ejercicio sin persistencia.
+- Editor /administrar/curso para roles admin existentes: títulos y explicaciones, sin HTML ejecutable. Auditoría atómica y conflicto concurrente 409. No se modificaron roles ni derechos de acceso.
+- 117 pruebas aprobadas; QA local de navegación y ejercicio de muestra realizado. QA del editor con cuenta admin real pendiente.
+- Plan y fuentes: docs/construction-plan.md. Videos, creación de módulos, edición e importación de preguntas siguen pendientes.

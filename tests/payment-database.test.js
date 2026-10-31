@@ -76,3 +76,26 @@ it('avance educativo conserva intentos por alumno y no expone soluciones privada
  await submit(env,'alice',q.id,expected);
  expect((await outline(env,'alice')).activity).toEqual({attempts:2,correctAttempts:2,solvedQuestions:1});
 });
+
+it('editor rechaza alumnos, audita cambios y detecta ediciones concurrentes',async()=>{
+ const {adminLessons,saveLesson}=await import('../apps/api/src/admin');
+ sqlite.exec(readFileSync('database/migrations/0002_training.sql','utf8'));
+ await expect(adminLessons(env,{id:'alice',role:'student'})).rejects.toThrow('No autorizado');
+ await expect(saveLesson(env,{id:'alice',role:'student'},'l1',{})).rejects.toThrow('No autorizado');
+ const actor={id:'alice',role:'admin'};const before=(await adminLessons(env,actor))[0];
+ const input={title:'Título revisado',body:'Explicación revisada',previousTitle:before.title,previousBody:before.body};
+ await saveLesson(env,actor,before.id,input);
+ expect(sqlite.prepare('SELECT title FROM lessons WHERE id=?').get(before.id).title).toBe(input.title);
+ expect(sqlite.prepare('SELECT COUNT(*) n FROM admin_audit_logs').get().n).toBe(1);
+ await expect(saveLesson(env,actor,before.id,input)).rejects.toThrow('cambió');
+ expect(sqlite.prepare('SELECT COUNT(*) n FROM admin_audit_logs').get().n).toBe(1);
+ await expect(saveLesson(env,actor,before.id,{...input,title:' '})).rejects.toThrow('Revisa');
+});
+it('editor y bitácora se revierten juntos si falla la escritura',async()=>{
+ const {adminLessons,saveLesson}=await import('../apps/api/src/admin');
+ sqlite.exec(readFileSync('database/migrations/0002_training.sql','utf8'));
+ const actor={id:'alice',role:'admin'};const before=(await adminLessons(env,actor))[0];
+ sqlite.exec("CREATE TRIGGER fail_audit BEFORE INSERT ON admin_audit_logs BEGIN SELECT RAISE(ABORT,'audit_failure'); END;");
+ await expect(saveLesson(env,actor,before.id,{title:'Nuevo',body:'Nuevo texto',previousTitle:before.title,previousBody:before.body})).rejects.toThrow();
+ expect(sqlite.prepare('SELECT body FROM lessons WHERE id=?').get(before.id).body).toBe(before.body);
+});

@@ -1,3 +1,4 @@
+import {adminLessons,saveLesson} from './admin';
 import {PRODUCT} from '../../../packages/shared/product';
 import {evaluateSample} from '../../../packages/math-engine';
 import {HttpError,json,sameOrigin,bodyJSON,type Env} from './types';
@@ -29,6 +30,11 @@ export async function handle(request:Request,env:Env):Promise<Response>{
   }
   if(route==='/api/training'&&request.method==='GET'){await requireEntitlement(env,user.id);return json(await outline(env,user.id));}
   if(route==='/api/attempts'&&request.method==='POST'){await requireEntitlement(env,user.id);const body=await bodyJSON(request);return json(await submit(env,user.id,body.questionId,body.answer));}
+  if(route==='/api/admin/lessons'&&request.method==='GET')return json(await adminLessons(env,user));
+  if(/^\/api\/admin\/lessons\/[^/]+$/.test(route)&&request.method==='POST'){
+   if(user.role!=='admin')throw new HttpError(403,'No autorizado');
+   return json(await saveLesson(env,user,route.split('/')[4],await bodyJSON(request,60000)));
+  }
   if(route==='/api/admin/orders'&&request.method==='GET'){
    if(user.role!=='admin')throw new HttpError(403,'No autorizado');
    return json((await env.DB.prepare('SELECT id,status,sku,amount_minor,currency,created_at FROM orders ORDER BY created_at DESC LIMIT 100').all()).results);
