@@ -60,13 +60,17 @@ export function checkoutURL(value:unknown,id:string,live=false){
  if(!validOrderId(id,live)||url.protocol!=='https:'||url.hostname!=='www.mercadopago.com.pe'||url.port||url.username||url.password||url.pathname!=='/checkout/v1/redirect'||url.searchParams.get('order_id')!==id)throw new HttpError(502,'Checkout no válido');
  return url.href;
 }
+export async function allowedProductionBuyer(env:Env,userId:string){
+ const user=await env.DB.prepare('SELECT email FROM users WHERE id=?').bind(userId).first<{email:string}>();
+ return Boolean(user&&env.PRODUCTION_PAYMENT_EMAILS?.split(',').map(x=>x.trim().toLowerCase()).includes(user.email.toLowerCase()));
+}
 export async function checkout(env:Env,userId:string,key:unknown,live=false){
  if(live){
   env=productionPaymentConfig(env);
   if(env.PRODUCTION_CHECKOUT_ENABLED!=='restricted')throw new HttpError(503,'Compra real aún desactivada');
  }else testPaymentConfig(env);
  const allowed=live?env.PRODUCTION_PAYMENT_USER_IDS:env.PAYMENT_TEST_USER_IDS;
- if(!allowed?.split(',').map(x=>x.trim()).includes(userId))throw new HttpError(403,'Compra de prueba reservada a usuarios autorizados');
+ if(!(allowed?.split(',').map(x=>x.trim()).includes(userId)||(live&&await allowedProductionBuyer(env,userId))))throw new HttpError(403,'Compra de prueba reservada a usuarios autorizados');
  if(typeof key!=='string'||! /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(key))throw new HttpError(400,'Se requiere Idempotency-Key UUID');
  const product=await env.DB.prepare('SELECT price_minor,currency,active FROM products WHERE sku=?').bind(PRODUCT.sku).first<{price_minor:number;currency:string;active:number}>();
  if(!product?.active||product.price_minor!==6700||product.currency!=='PEN')throw new HttpError(503,'Producto no disponible');
