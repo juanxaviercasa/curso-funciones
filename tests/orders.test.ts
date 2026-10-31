@@ -1,5 +1,5 @@
 import {it,expect,vi,afterEach} from 'vitest';
-import {normalizeOrder,orderBody,checkoutURL,mpFetch,webhook,type Order,type ProviderOrder} from '../apps/api/src/payments';
+import {reconcile,normalizeOrder,orderBody,checkoutURL,mpFetch,webhook,type Order,type ProviderOrder} from '../apps/api/src/payments';
 import type {Env} from '../apps/api/src/types';
 const order:Order={id:'local1',user_id:'alice',sku:'MSV-FUN-001',currency:'PEN',amount_minor:6700,external_reference:'ref1',provider:'mercadopago'};
 const env={APP_ENV:'staging',PAYMENTS_ENABLED:'sandbox',APP_ORIGIN:'https://example.test',MERCADOPAGO_COLLECTOR_ID:'789',MERCADOPAGO_APPLICATION_ID:'app1',MERCADOPAGO_ACCESS_TOKEN:'test-fixture',MERCADOPAGO_WEBHOOK_SECRET:'fixture-secret'} as Env;
@@ -22,3 +22,11 @@ it('webhook válido consulta el recurso al servidor y no confía en el cuerpo',a
 
 it.each(['67','67.0','67.00'])('acepta importes decimales equivalentes del proveedor %s',amount=>expect(normalizeOrder({...resource,total_amount:amount,total_paid_amount:amount,items:[{...resource.items[0],unit_price:amount}],transactions:{payments:[{status:'processed',status_detail:'accredited',amount,paid_amount:amount}]}},order,env).status).toBe('approved'));
 it.each(['67.01','66.99','6700','6.7e1','67.001',' 67','67 '])('no acredita importes incorrectos o ambiguos %s',amount=>expect(normalizeOrder({...resource,transactions:{payments:[{status:'processed',status_detail:'accredited',amount,paid_amount:amount}]}},order,env).status).toBe('pending'));
+it.each([false,true])('reconciliacion solo concede acceso con evento firmado previo %s',async signedEvent=>{
+ vi.stubGlobal('fetch',vi.fn().mockResolvedValue(Response.json(resource)));
+ const batch=vi.fn().mockResolvedValue([]);
+ const db={batch,prepare:(sql:string)=>({bind:()=>({first:async()=>sql.includes('payment_events')?(signedEvent?{ok:1}:null):{...order,provider_order_id:resource.id}})})};
+ const result=await reconcile({...env,DB:db as unknown as D1Database},'alice','local1');
+ expect(result.status).toBe(signedEvent?'approved':'awaiting_notification');
+ expect(batch).toHaveBeenCalledTimes(signedEvent?1:0);
+});

@@ -82,10 +82,11 @@ export async function reconcile(env:Env,userId:string,localId:string){
  if(!order)throw new HttpError(404,'Orden no encontrada');
  if(!order.provider_order_id)return {status:'pending'};
  const r=await mpFetch(env,'/v1/orders/'+encodeURIComponent(order.provider_order_id)) as unknown as ProviderOrder;
- // Consulta de estado: no concede acceso hasta recibir un webhook firmado; sí revoca por devolución.
+ // Recupera una confirmación ya firmada tras consultar nuevamente el recurso al proveedor.
  const p=normalizeOrder(r,order,env);
- if(p.status==='refunded'||p.status==='cancelled')await applyPayment(env,p,'reconcile:'+r.id+':'+r.last_updated_date);
- return {status:p.status==='approved'?'awaiting_notification':p.status};
+ const signedEvent=p.status==='approved'?await env.DB.prepare("SELECT 1 FROM payment_events WHERE provider='mercadopago' AND resource_id=? AND signature_valid=1 AND processed=1 LIMIT 1").bind(r.id).first():null;
+ if(signedEvent||p.status==='refunded'||p.status==='cancelled')await applyPayment(env,p,'reconcile:'+r.id+':'+r.last_updated_date);
+ return {status:p.status==='approved'&&!signedEvent?'awaiting_notification':p.status};
 }
 export async function applyPayment(env:Env,payment:Payment,eventKey:string){
  const order=await env.DB.prepare('SELECT * FROM orders WHERE external_reference=?').bind(payment.external_reference).first<Order>();
