@@ -2,7 +2,7 @@ import {PRODUCT} from '../../../packages/shared/product';
 import {evaluateSample} from '../../../packages/math-engine';
 import {HttpError,json,sameOrigin,bodyJSON,type Env} from './types';
 import {requireUser,requireEntitlement} from './auth';
-import {checkout,webhook,reconcile,paymentMethodDiagnostic} from './payments';
+import {checkout,webhook,reconcile,paymentMethodDiagnostic,productionCheckoutPreview} from './payments';
 import {outline,submit} from './training';
 export async function handle(request:Request,env:Env):Promise<Response>{
  const url=new URL(request.url);const route=url.pathname;
@@ -14,6 +14,7 @@ export async function handle(request:Request,env:Env):Promise<Response>{
  if(route.startsWith('/api/')){
   if(!['GET','HEAD'].includes(request.method))sameOrigin(request,env);
   const user=await requireUser(request,env);
+  if(route==='/api/production-checkout-preview'&&request.method==='POST')return json(await productionCheckoutPreview(env,user.id,request.headers.get('Idempotency-Key')));
   if(route==='/api/payment-method-diagnostic'&&request.method==='GET')return json(await paymentMethodDiagnostic(env,user.id));
   if(route==='/api/me'&&request.method==='GET'){
    const rights=await env.DB.prepare('SELECT sku FROM entitlements WHERE user_id=? AND active=1 GROUP BY sku').bind(user.id).all();
