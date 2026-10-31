@@ -46,3 +46,5 @@ Se aplicaron ambas migraciones en D1 local. TypeScript, pruebas y build se ejecu
 
 ## Actualización Orders — 31 de octubre de 2026
 Se reemplazó la integración Preferences por Checkout Pro Orders conforme a la aplicación creada en el panel. 78 pruebas locales aprobadas y compilación Pages correcta. Base D1 de pruebas creada y migrada, producto inactivo. Cuenta de identidad, secretos, webhook y compra simulada contra Mercado Pago siguen pendientes. Véase docs/payment-runbook.md; sustituye las decisiones previas de Preferences. PAYMENTS_ENABLED continúa false.
+
+Academia Zenit vinculada por autorización del propietario; instancia development. Clave publicable configurada para Worker. CLERK_SECRET_KEY debe ingresarla el propietario como secreto en Cloudflare; nunca en Git.

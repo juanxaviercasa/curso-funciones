@@ -6,7 +6,8 @@
     "APP_ENV": "staging",
     "PAYMENTS_ENABLED": "false",
     "APP_ORIGIN": "https://funcionesdesdecero.sistemazenit.com",
-    "MERCADOPAGO_APPLICATION_ID": "2136866391679868"
+    "MERCADOPAGO_APPLICATION_ID": "2136866391679868",
+    "CLERK_PUBLISHABLE_KEY": "pk_test_YmV0dGVyLWNvbmRvci0xNTAzLmNsZXJrLmFjY291bnRzLmRldiQ"
   },
   "env": {
     "preview": {
