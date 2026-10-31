@@ -5,7 +5,7 @@
   "vars": {
     "APP_ENV": "staging",
     "PRODUCTION_CHECKOUT_PREVIEW": "disabled",
-    "PRODUCTION_WEBHOOKS_ENABLED": "false",
+    "PRODUCTION_WEBHOOKS_ENABLED": "true",
     "PRODUCTION_CHECKOUT_ENABLED": "disabled",
     "PAYMENTS_ENABLED": "sandbox",
     "APP_ORIGIN": "https://funcionesdesdecero.sistemazenit.com",
@@ -18,7 +18,7 @@
     "preview": {
       "vars": {
         "APP_ENV": "staging",
-    "PRODUCTION_CHECKOUT_PREVIEW": "disabled",
+        "PRODUCTION_CHECKOUT_PREVIEW": "disabled",
         "PAYMENTS_ENABLED": "false"
       }
     }
