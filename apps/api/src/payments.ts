@@ -79,7 +79,10 @@ export async function checkout(env:Env,userId:string,key:unknown,live=false){
  if(!order)throw new HttpError(500,'No se pudo recuperar la orden');
  if((order.payment_environment||'sandbox')!==(live?'production':'sandbox'))throw new HttpError(409,'La solicitud pertenece a otro entorno de pagos');
  // El UUID interno se reutiliza como idempotencia del proveedor incluso después de un timeout.
- const resource=await mpFetch(env,'/v1/orders',{method:'POST',headers:{'X-Idempotency-Key':order.id},body:JSON.stringify(orderBody(order,env.APP_ORIGIN!))});
+ const buyer=await env.DB.prepare('SELECT email FROM users WHERE id=?').bind(userId).first<{email:string}>();
+ if(!buyer?.email)throw new HttpError(422,'Correo verificado del estudiante no disponible');
+ const body={...orderBody(order,env.APP_ORIGIN!),payer:{email:buyer.email}};
+ const resource=await mpFetch(env,'/v1/orders',{method:'POST',headers:{'X-Idempotency-Key':order.id},body:JSON.stringify(body)});
  const id=String(resource.id||'');const target=checkoutURL(resource.checkout_url,id,live);
  normalizeOrder(resource as unknown as ProviderOrder,order,env);
  await env.DB.prepare('UPDATE orders SET provider_order_id=? WHERE id=? AND (provider_order_id IS NULL OR provider_order_id=?)').bind(id,order.id,id).run();
