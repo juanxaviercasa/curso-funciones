@@ -1,26 +1,27 @@
-# Lista viva
+# Lista viva — 31 de octubre de 2026
 
-| Fase | Estado | Entregable / requisito pendiente |
+| Fase | Estado | Evidencia y pendiente |
 |---|---|---|
-| 0 Auditoría | DOING | Inventario local y decisiones DONE; cuentas, privacidad GitHub, cuotas y hosting TODO |
-| 1 Base | DOING | Estructura, CI y migración creadas; validar checks y D1 local; preview remoto TODO |
-| 2 Oferta | DOING | Landing y muestra implementadas; QA navegador TODO; políticas son borradores |
-| 3 Identidad | TODO | Seleccionar y configurar proveedor; sesión, roles, CSRF, Turnstile, límites y pruebas IDOR |
-| 4 Mercado Pago | TODO | Preferencia, firma, consulta autenticada, atomicidad, conciliación y matriz de pruebas |
-| 5 Entrenamiento | TODO | Contenido original, preguntas premium, progreso, administración y videos |
-| 6 Yape | TODO | Inspeccionar disponibilidad y validar integración o revisión manual autorizada |
-| 7 Lanzamiento | TODO | Endurecimiento, staging, e2e, políticas revisadas, backups, GO/NO-GO del propietario |
+| 0 Auditoría | DOING | Repositorio y cuentas conectados; revisar privacidad, protecciones y cuotas antes del lanzamiento |
+| 1 Base | DONE | Proyecto, D1 migraciones 0001–0004, Pages Functions y dominio publicados |
+| 2 Oferta | DOING | Landing y demo publicadas; políticas y datos comerciales requieren revisión del propietario |
+| 3 Identidad | DOING | Clerk conectado y sesión verificada en backend; instancia productiva y revisión antiabuso pendientes |
+| 4 Mercado Pago | DOING | Orders sandbox aprobado y acceso comprobado; controles y pruebas automatizadas; validación real aprobada aún pendiente |
+| 5 Entrenamiento | DOING | Cinco lecciones, seis ejercicios, progreso y resumen de intentos; videos, pistas escalonadas y ampliación del banco pendientes |
+| 6 Yape | BLOCKED | Visible en checkout; autopagos rechazados. Pendiente compra legítima de otra persona y acceso verificado; continuar tareas independientes |
+| 7 Lanzamiento | TODO | Revisión e2e móvil, producción Clerk, seguridad, backups, políticas y GO/NO-GO |
 
-No se considera una fase completa mientras falte su evidencia externa obligatoria.
+## Hito actual: seguimiento del aprendizaje
+- Backend agrega intentos totales, respuestas correctas y ejercicios únicos resueltos filtrados por alumno.
+- Panel muestra lecciones completadas y permite continuar en la primera incompleta.
+- Prueba con SQLite real verifica aislamiento entre dos alumnos y que intentos repetidos no inflan ejercicios únicos resueltos.
+- 115 pruebas, TypeScript y compilación aprobados. QA visual con cuenta autorizada pendiente del despliegue.
 
-## Avance adicional
-- Código de identidad Clerk, panel, autorización y consulta administrativa: implementado, pendiente configuración y pruebas con sesiones reales.
-- Adaptador sandbox de Preferences y webhook transaccional: implementado, pendiente matriz D1/concurrencia y prueba integrada con proveedor.
-- Cinco lecciones originales de texto y seis ejercicios privados en D1; tres tipos (elección, numérico exacto, conjunto por selección). Videos y pistas escalonadas pendientes.
-- Conciliación, Turnstile/rate limit, R2, panel de revisión Yape, CI remoto y despliegue siguen TODO.
+## Próximas tareas
+1. Revisar experiencia privada en navegador con cuenta que tiene acceso, sin conceder acceso artificial al alumno sin compra.
+2. Añadir pistas escalonadas y ampliar contenido original; preparar guiones para los videos pendientes.
+3. Resolver configuración productiva de Clerk con intervención del propietario cuando corresponda.
+4. Revisar operación administrativa, recuperación, límites, respaldo y criterios de lanzamiento.
 
-## Hito de publicación
-DONE: primer commit/push a main, Pages con Functions, dominio personalizado, validación HTTPS y muestra en navegador. Cuenta Cloudflare y repositorio conectados mediante integración existente. TODO: verificar visibilidad privada y protecciones GitHub, CI remoto, proveedor identidad, D1 remoto y criterios de lanzamiento.
-
-## Actualización Orders — 31 de octubre de 2026
-Se reemplazó la integración Preferences por Checkout Pro Orders conforme a la aplicación creada en el panel. 78 pruebas locales aprobadas y compilación Pages correcta. Base D1 de pruebas creada y migrada, producto inactivo. Cuenta de identidad, secretos, webhook y compra simulada contra Mercado Pago siguen pendientes. Véase docs/payment-runbook.md; sustituye las decisiones previas de Preferences. PAYMENTS_ENABLED continúa false.
+## Pagos: decisión vigente del propietario
+Continuar el proyecto sin repetir autopagos. No migrar de API solo para simular Yape. No afirmar validación integral de Yape ni de acceso por pago real. No habilitar venta pública automáticamente.

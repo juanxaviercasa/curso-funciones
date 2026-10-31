@@ -2,8 +2,12 @@
 
 Producto: **Funciones desde Cero para la Universidad**. Precio fijo: **S/67.00 PEN**.
 
-## Estado real
-Base local creada desde cero. Landing adaptable, demo corregida en servidor, migración D1, bloqueo de pagos y pruebas iniciales. No es una tienda operativa. Identidad, entrenamiento y adaptador sandbox tienen código preparado; conectar y validar cuentas, Yape y despliegue siguen pendientes. No hay credenciales ni cobros reales.
+## Estado real — 31 de octubre de 2026
+Sitio desplegado en Cloudflare Pages con dominio propio, D1 y autenticación Clerk conectados. Compra sandbox aprobada con acceso concedido tras notificación firmada. Checkout Pro Orders y webhook real separados del sandbox. Venta pública cerrada; compra real restringida a la cuenta de validación autorizada.
+
+Yape aparece en checkout como invitado. Los intentos del propietario fueron rechazados por seguridad; según lo comunicado por el propietario tras hablar con soporte, no se permiten autopagos. Yape queda pendiente de una compra legítima de otra persona y de verificar el acceso resultante. No se considera validado de extremo a extremo.
+
+Cinco lecciones de texto y seis ejercicios privados con autocorrección y progreso. Resumen de lecciones, ejercicios resueltos e intentos por alumno y enlace para continuar. Videos pendientes. Clerk aún usa instancia de desarrollo. No es un lanzamiento comercial completo.
 
 ## Desarrollo
 Requiere Node 22+ (24 recomendado).
@@ -17,9 +21,8 @@ Wrangler sirve frontend compilado y API en http://127.0.0.1:8787. Para editar la
 
 Leer docs/backlog.md, docs/architecture.md y docs/deployment.md. El plan maestro en la raíz gobierna el alcance. No activar producción sin aprobación del propietario.
 
-## Integraciones preparadas (aún no conectadas)
-Clerk gestiona identidad; Worker verifica la sesión y correo antes de crear el usuario local. Definir VITE_CLERK_PUBLISHABLE_KEY en entorno local privado (Vite usa apps/web como raíz), y CLERK_PUBLISHABLE_KEY, CLERK_SECRET_KEY y APP_ORIGIN en Worker mediante interfaces seguras. Ningún secreto debe tener prefijo VITE_. Configurar acceso por código/correo y protección antiabuso en el proveedor.
-Se incluyen cinco lecciones de texto y seis preguntas premium en D1, con autocorrección y progreso. El adaptador de pagos solo admite sandbox y permanece bloqueado hasta configurar la cuenta y validar pruebas. Producción está prohibida en código.
+## Integraciones
+Clerk verifica sesión y correo en servidor. Configurar secretos solo mediante interfaces seguras; ningún secreto debe tener prefijo VITE_. Revisar docs/backlog.md y docs/production-payment-validation.md antes de cambiar pagos o entornos.
 
 ## Marca vigente
 Por instrucción del propietario, Sistema Zenit reemplaza la marca anterior. Azul profundo con acentos naranja y amarillo. El SKU MSV-FUN-001 se conserva como identificador técnico para no alterar órdenes o pruebas. El entrenamiento y precio S/67 permanecen. Dominio elegido: funcionesdesdecero.sistemazenit.com; conectado al despliegue de vista previa.
@@ -27,4 +30,4 @@ Por instrucción del propietario, Sistema Zenit reemplaza la marca anterior. Azu
 ## Vista previa publicada
 https://funcionesdesdecero.sistemazenit.com
 
-Cloudflare Pages + Functions, integrado con main. Compras desactivadas. La demo funciona; el acceso privado requiere configurar identidad y base remota.
+Cloudflare Pages + Functions, integrado con main. Compras públicas desactivadas. Demo funcional y área privada conectada. El curso requiere un derecho de acceso validado en servidor.

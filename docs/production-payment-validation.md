@@ -26,3 +26,10 @@ Fuente: https://www.mercadopago.com.pe/developers/es/docs/checkout-pro-orders/no
 
 ## Actualización operativa
 Migración 0004 aplicada y verificada: cuatro órdenes anteriores permanecen sandbox. Webhook de producción guardado en Mercado Pago para Order. El propietario guardó MERCADOPAGO_PRODUCTION_WEBHOOK_SECRET cifrado en Cloudflare. Se habilita únicamente recepción de notificaciones; checkout real y checkout de inspección siguen disabled. Pendiente verificar firma mediante notificación del proveedor y ensayo real autorizado.
+
+## Estado posterior a los intentos reales — 31 de octubre de 2026
+La migración y secretos fueron configurados y el webhook real recibe notificaciones. Checkout restringido fue autorizado para jxaviercabellos@gmail.com; el servidor envía el correo local verificado en payer.email. La venta pública continúa cerrada.
+
+Dos intentos con Yape del propio titular vendedor fueron rechazados; el propietario confirmó ausencia de descuento. Operación más reciente: 187076107106, orden ORD01M69FT6Q1VVVYEQ4R0HJBVSQF. Captura del proveedor indica pago sospechoso. Según el propietario, soporte confirmó que no permite autopagos y que una validación real requiere otra persona con su propio Yape. El propietario decidió continuar las otras tareas sin repetir pagos propios.
+
+Pendiente: compra legítima de tercero, notificación aprobada, concesión única al estudiante y acceso al contenido. No presentar Yape como validado de extremo a extremo. Estas notas posteriores reemplazan los estados pendientes de configuración de las secciones históricas anteriores.

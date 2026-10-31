@@ -1,3 +1,4 @@
+import {outline,submit} from '../apps/api/src/training';
 import {DatabaseSync} from 'node:sqlite';
 import {readFileSync} from 'node:fs';
 import {beforeEach,afterEach,it,expect,vi} from 'vitest';
@@ -60,3 +61,18 @@ it('checkout real restringido persiste entorno y no concede acceso antes de paga
 it('una clave de checkout de sandbox no se reutiliza en producción',async()=>{sqlite.exec('UPDATE products SET active=1');const key=crypto.randomUUID();vi.stubGlobal('fetch',mockOrders());await checkout(checkoutEnv(),'alice',key);const mock=vi.fn();vi.stubGlobal('fetch',mock);await expect(checkout({...productionEnv(),PRODUCTION_CHECKOUT_ENABLED:'restricted'},'alice',key,true)).rejects.toThrow('otro entorno');expect(mock).not.toHaveBeenCalled();});
 
 it('autorización por correo se limita a la cuenta local verificada elegida',async()=>{sqlite.exec('UPDATE products SET active=1');const config={...productionEnv(),PRODUCTION_CHECKOUT_ENABLED:'restricted',PRODUCTION_PAYMENT_USER_IDS:'',PRODUCTION_PAYMENT_EMAILS:'alice@example.test'};const mock=vi.fn(async(_url,init)=>{const body=JSON.parse(init.body);return Response.json(productionResource({external_reference:body.external_reference,status:'created',total_paid_amount:'0',checkout_url:'https://www.mercadopago.com.pe/checkout/v1/redirect?order_id=ORD0000000000123'}));});vi.stubGlobal('fetch',mock);await expect(checkout(config,'bob',crypto.randomUUID(),true)).rejects.toThrow('autorizados');expect(mock).not.toHaveBeenCalled();await checkout(config,'alice',crypto.randomUUID(),true);expect(mock).toHaveBeenCalledTimes(1);expect(JSON.parse(mock.mock.calls[0][1].body).payer).toEqual({email:'alice@example.test'});expect(active()).toBe(0);});
+
+it('avance educativo conserva intentos por alumno y no expone soluciones privadas',async()=>{
+ sqlite.exec(readFileSync('database/migrations/0002_training.sql','utf8'));
+ const initial=await outline(env,'alice');expect(initial.activity.attempts).toBe(0);
+ const q=sqlite.prepare('SELECT * FROM questions LIMIT 1').get();
+ const expected=String(JSON.parse(q.private_rule_json).expected);
+ await submit(env,'alice',q.id,expected);
+ const own=await outline(env,'alice');const other=await outline(env,'bob');
+ expect(own.activity).toEqual({attempts:1,correctAttempts:1,solvedQuestions:1});
+ expect(other.activity).toEqual({attempts:0,correctAttempts:0,solvedQuestions:0});
+ expect(other.lessons.every(l=>l.completed===0)).toBe(true);
+ expect(own.questions.every(q=>!('private_rule_json' in q)&&!('explanation' in q))).toBe(true);
+ await submit(env,'alice',q.id,expected);
+ expect((await outline(env,'alice')).activity).toEqual({attempts:2,correctAttempts:2,solvedQuestions:1});
+});

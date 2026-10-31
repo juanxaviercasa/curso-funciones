@@ -3,7 +3,8 @@ import {HttpError,type Env} from './types';
 export async function outline(env:Env,userId:string){
  const lessons=await env.DB.prepare('SELECT l.id,l.title,l.body,l.video_key,m.title module_title,m.position module_position,COALESCE(p.completed,0) completed FROM lessons l JOIN modules m ON m.id=l.module_id LEFT JOIN progress p ON p.lesson_id=l.id AND p.user_id=? ORDER BY m.position,l.position').bind(userId).all();
  const questions=await env.DB.prepare('SELECT id,lesson_id,kind,prompt,options_json FROM questions ORDER BY id').all();
- return {lessons:lessons.results.map(l=>({...l,video_key:undefined,videoAvailable:false})),questions:questions.results};
+ const activity=await env.DB.prepare('SELECT COUNT(*) attempts,COALESCE(SUM(correct),0) correctAttempts,COUNT(DISTINCT CASE WHEN correct=1 THEN question_id END) solvedQuestions FROM attempts WHERE user_id=?').bind(userId).first();
+ return {activity,lessons:lessons.results.map(l=>({...l,video_key:undefined,videoAvailable:false})),questions:questions.results};
 }
 export async function submit(env:Env,userId:string,questionId:unknown,answer:unknown){
  if(typeof questionId!=='string'||typeof answer!=='string'||answer.length>40)throw new HttpError(400,'Respuesta inválida');
