@@ -41,7 +41,7 @@ function productionEnv(){return {...checkoutEnv(),PRODUCTION_WEBHOOKS_ENABLED:'t
 function productionResource(patch={}){return {id:'ORD0000000000123',type:'online',processing_mode:'manual',status:'processed',status_detail:'accredited',external_reference:'r1',total_amount:'67.00',total_paid_amount:'67.00',currency:'PEN',country_code:'PER',user_id:'291342046',integration_data:{application_id:'2136866391679868'},last_updated_date:'2026-10-31T12:00:00Z',items:[{external_code:'MSV-FUN-001',quantity:1,unit_price:'67.00'}],transactions:{payments:[{status:'processed',status_detail:'accredited',amount:'67',paid_amount:'67'}]},...patch};}
 async function productionNotification(live=true,secret='production-signature-fixture',id='ORD0000000000123'){
  const ts=String(Date.now()),encoder=new TextEncoder(),key=await crypto.subtle.importKey('raw',encoder.encode(secret),{name:'HMAC',hash:'SHA-256'},false,['sign']);
- const digest=new Uint8Array(await crypto.subtle.sign('HMAC',key,encoder.encode('id:'+id.toLowerCase()+';request-id:real-event-1;ts:'+ts+';')));
+ const digest=new Uint8Array(await crypto.subtle.sign('HMAC',key,encoder.encode('id:'+id+';request-id:real-event-1;ts:'+ts+';')));
  const hex=Array.from(digest,b=>b.toString(16).padStart(2,'0')).join('');
  return new Request('https://example.test/api/webhooks/mercadopago-production?type=order&data.id='+id,{method:'POST',headers:{'Content-Type':'application/json','x-request-id':'real-event-1','x-signature':'ts='+ts+',v1='+hex},body:JSON.stringify({type:'order',live_mode:live,data:{id}})});
 }

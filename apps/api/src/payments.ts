@@ -32,7 +32,7 @@ export async function verifySignature(request:Request,secret:string,now=Date.now
  if(Math.abs(now-milliseconds)>300000){console.warn('mp_signature_rejected',{reason:'expired'});throw new HttpError(401,'Notificación expirada');}
  const encoder=new TextEncoder();const key=await crypto.subtle.importKey('raw',encoder.encode(secret),{name:'HMAC',hash:'SHA-256'},false,['verify']);
  const bytes=new Uint8Array(match[2].match(/../g)!.map(v=>parseInt(v,16)));
- const valid=await crypto.subtle.verify('HMAC',key,bytes,encoder.encode('id:'+id.toLowerCase()+';request-id:'+rid+';ts:'+match[1]+';'));
+ const valid=await crypto.subtle.verify('HMAC',key,bytes,encoder.encode('id:'+id+';request-id:'+rid+';ts:'+match[1]+';'));
  if(!valid){console.warn('mp_signature_rejected',{reason:'hmac'});throw new HttpError(401,'Firma inválida');}return {id,requestId:rid};
 }
 export async function mpFetch(env:Env,pathname:string,options:RequestInit={}){
