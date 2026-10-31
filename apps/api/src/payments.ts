@@ -1,14 +1,14 @@
 import {PRODUCT} from '../../../packages/shared/product';
-import {HttpError,type Env} from './types';
-export interface Order {id:string;user_id:string;sku:string;amount_minor:number;currency:string;external_reference:string;provider:string;}
+import {HttpError,bodyJSON,type Env} from './types';
+export interface Order {id:string;user_id:string;sku:string;amount_minor:number;currency:string;external_reference:string;provider:string;provider_order_id?:string|null;checkout_key?:string;}
 export interface Payment {id:number|string;status:string;transaction_amount:number;currency_id:string;collector_id:number|string;external_reference:string;live_mode:boolean;date_last_updated:string;transaction_amount_refunded?:number;additional_info?:{items?:{id?:string;quantity?:number|string}[]};}
 export function testPaymentConfig(env:Env){
  // La primera versión solo permite sandbox. Producción requiere una revisión explícita del código y GO del propietario.
- if(env.APP_ENV==='production'||env.PAYMENTS_ENABLED!=='sandbox'||!env.MERCADOPAGO_ACCESS_TOKEN||!env.MERCADOPAGO_WEBHOOK_SECRET||!env.MERCADOPAGO_COLLECTOR_ID||!env.APP_ORIGIN?.startsWith('https://'))throw new HttpError(503,'Pagos de prueba pendientes de configuración');
+ if(env.APP_ENV==='production'||env.PAYMENTS_ENABLED!=='sandbox'||!env.MERCADOPAGO_ACCESS_TOKEN||!env.MERCADOPAGO_WEBHOOK_SECRET||!env.MERCADOPAGO_COLLECTOR_ID||!env.MERCADOPAGO_APPLICATION_ID||!env.APP_ORIGIN?.startsWith('https://'))throw new HttpError(503,'Pagos de prueba pendientes de configuración');
 }
 export function validatePayment(payment:Payment,order:Order,collector:string){
  if(order.provider!=='mercadopago'||order.sku!==PRODUCT.sku||order.amount_minor!==6700||order.currency!=='PEN')throw new HttpError(422,'Orden incompatible');
- if(!/^[0-9]+$/.test(String(payment.id))||payment.live_mode!==false||String(payment.collector_id)!==collector||payment.external_reference!==order.external_reference||payment.currency_id!=='PEN'||payment.transaction_amount!==67)throw new HttpError(422,'Pago no corresponde a la orden');
+ if(!/^ORDTST[A-Z0-9]{10,64}$/.test(String(payment.id))||payment.live_mode!==false||String(payment.collector_id)!==collector||payment.external_reference!==order.external_reference||payment.currency_id!=='PEN'||payment.transaction_amount!==67)throw new HttpError(422,'Pago no corresponde a la orden');
  const items=payment.additional_info?.items;
  if(items && (items.length!==1||items[0].id!==PRODUCT.sku||Number(items[0].quantity)!==1))throw new HttpError(422,'Producto incorrecto');
  const timestamp=Date.parse(payment.date_last_updated);if(!Number.isFinite(timestamp))throw new HttpError(422,'Fecha inválida');
@@ -17,8 +17,10 @@ export function validatePayment(payment:Payment,order:Order,collector:string){
 }
 export async function verifySignature(request:Request,secret:string,now=Date.now()){
  const url=new URL(request.url);const id=url.searchParams.get('data.id');const rid=request.headers.get('x-request-id');const sig=request.headers.get('x-signature')||'';
- const match=/^ts=(\d{10}|\d{13}),v1=([a-fA-F0-9]{64})$/.exec(sig);
- if(!id||!/^\d+$/.test(id)||!rid||!/^[-a-zA-Z0-9]{1,128}$/.test(rid)||!match)throw new HttpError(401,'Firma inválida');
+ const parts=sig.split(',').map(p=>p.trim().split('='));
+ const ts=parts.filter(p=>p[0]==='ts'),v1=parts.filter(p=>p[0]==='v1');
+ const match=ts.length===1&&v1.length===1&&/^\d{10}(?:\d{3})?$/.test(ts[0][1])&&/^[a-fA-F0-9]{64}$/.test(v1[0][1])?['',ts[0][1],v1[0][1]]:null;
+ if(!id||!/^ORDTST[A-Z0-9]{10,64}$/i.test(id)||!rid||!/^[-a-zA-Z0-9]{1,128}$/.test(rid)||!match)throw new HttpError(401,'Firma inválida');
  const milliseconds=Number(match[1])*(match[1].length===10?1000:1);
  if(Math.abs(now-milliseconds)>300000)throw new HttpError(401,'Notificación expirada');
  const encoder=new TextEncoder();const key=await crypto.subtle.importKey('raw',encoder.encode(secret),{name:'HMAC',hash:'SHA-256'},false,['verify']);
@@ -27,21 +29,62 @@ export async function verifySignature(request:Request,secret:string,now=Date.now
  if(!valid)throw new HttpError(401,'Firma inválida');return {id,requestId:rid};
 }
 export async function mpFetch(env:Env,pathname:string,options:RequestInit={}){
- const response=await fetch('https://api.mercadopago.com'+pathname,{...options,headers:{Authorization:'Bearer '+env.MERCADOPAGO_ACCESS_TOKEN,'Content-Type':'application/json'},signal:AbortSignal.timeout(10000)});
+ const headers=new Headers(options.headers);headers.set('Authorization','Bearer '+env.MERCADOPAGO_ACCESS_TOKEN);headers.set('Content-Type','application/json');
+ let response:Response;
+ try{response=await fetch('https://api.mercadopago.com'+pathname,{...options,headers,signal:AbortSignal.timeout(10000)});}catch{throw new HttpError(502,'No se pudo consultar Mercado Pago; reintenta con la misma solicitud');}
  if(!response.ok)throw new HttpError(502,'Mercado Pago no respondió correctamente');return response.json() as Promise<Record<string,unknown>>;
 }
-export function preferenceBody(order:Order,origin:string){return {items:[{id:PRODUCT.sku,title:PRODUCT.name,quantity:1,currency_id:'PEN',unit_price:order.amount_minor/100}],external_reference:order.external_reference,back_urls:{success:origin+'/pago/resultado',failure:origin+'/pago/resultado',pending:origin+'/pago/resultado'},notification_url:origin+'/api/webhooks/mercadopago',auto_return:'approved'};}
-export async function checkout(env:Env,userId:string){
+export function orderBody(order:Order,origin:string){
+ const result=origin+'/pago/resultado';
+ return {type:'online',processing_mode:'manual',total_amount:'67.00',external_reference:order.external_reference,
+ items:[{external_code:PRODUCT.sku,title:PRODUCT.name,quantity:1,unit_price:'67.00'}],
+ config:{online:{success_url:result,failure_url:result,pending_url:result,auto_return:'approved'}}};
+}
+export function checkoutURL(value:unknown,id:string){
+ if(typeof value!=='string')throw new HttpError(502,'Checkout de prueba no disponible');
+ const url=new URL(value);
+ if(!/^ORDTST[A-Z0-9]{10,64}$/.test(id)||url.protocol!=='https:'||url.hostname!=='www.mercadopago.com.pe'||url.port||url.username||url.password||url.pathname!=='/checkout/v1/redirect'||url.searchParams.get('order_id')!==id)throw new HttpError(502,'Checkout de prueba no válido');
+ return url.href;
+}
+export async function checkout(env:Env,userId:string,key:unknown){
  testPaymentConfig(env);
+ if(!env.PAYMENT_TEST_USER_IDS?.split(',').map(x=>x.trim()).includes(userId))throw new HttpError(403,'Compra de prueba reservada a usuarios autorizados');
+ if(typeof key!=='string'||! /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(key))throw new HttpError(400,'Se requiere Idempotency-Key UUID');
  const product=await env.DB.prepare('SELECT price_minor,currency,active FROM products WHERE sku=?').bind(PRODUCT.sku).first<{price_minor:number;currency:string;active:number}>();
  if(!product?.active||product.price_minor!==6700||product.currency!=='PEN')throw new HttpError(503,'Producto no disponible');
- const order:Order={id:crypto.randomUUID(),user_id:userId,sku:PRODUCT.sku,amount_minor:product.price_minor,currency:product.currency,external_reference:crypto.randomUUID(),provider:'mercadopago'};
- await env.DB.prepare('INSERT INTO orders(id,user_id,sku,amount_minor,currency,provider,external_reference) VALUES(?,?,?,?,?,?,?)').bind(order.id,userId,order.sku,order.amount_minor,order.currency,order.provider,order.external_reference).run();
- // Una preferencia por orden; no se reintenta su creación automáticamente ante timeout.
- const preference=await mpFetch(env,'/checkout/preferences',{method:'POST',body:JSON.stringify(preferenceBody(order,env.APP_ORIGIN!))});
- const target=typeof preference.sandbox_init_point==='string'?new URL(preference.sandbox_init_point):null;
- if(!target||target.protocol!=='https:'||!['sandbox.mercadopago.com.pe','www.mercadopago.com.pe'].includes(target.hostname))throw new HttpError(502,'Checkout de prueba no disponible');
- return {orderId:order.id,checkoutUrl:target.href};
+ await env.DB.prepare('INSERT INTO orders(id,user_id,sku,amount_minor,currency,provider,external_reference,checkout_key) VALUES(?,?,?,?,?,?,?,?) ON CONFLICT(user_id,checkout_key) DO NOTHING').bind(crypto.randomUUID(),userId,PRODUCT.sku,6700,'PEN','mercadopago',crypto.randomUUID(),key).run();
+ const order=await env.DB.prepare('SELECT * FROM orders WHERE user_id=? AND checkout_key=?').bind(userId,key).first<Order>();
+ if(!order)throw new HttpError(500,'No se pudo recuperar la orden');
+ // El UUID interno se reutiliza como idempotencia del proveedor incluso después de un timeout.
+ const resource=await mpFetch(env,'/v1/orders',{method:'POST',headers:{'X-Idempotency-Key':order.id},body:JSON.stringify(orderBody(order,env.APP_ORIGIN!))});
+ const id=String(resource.id||'');const target=checkoutURL(resource.checkout_url,id);
+ normalizeOrder(resource as unknown as ProviderOrder,order,env);
+ await env.DB.prepare('UPDATE orders SET provider_order_id=? WHERE id=? AND (provider_order_id IS NULL OR provider_order_id=?)').bind(id,order.id,id).run();
+ return {orderId:order.id,checkoutUrl:target};
+}
+export interface ProviderOrder {
+ id:string;type:string;processing_mode:string;status:string;status_detail:string;external_reference:string;
+ total_amount:string;total_paid_amount:string;currency:string;country_code:string;user_id:string;last_updated_date:string;
+ integration_data:{application_id:string};items:{external_code:string;quantity:number;unit_price:string}[];
+ transactions?:{payments?:{status:string;status_detail:string;amount:string;paid_amount:string}[];refunds?:{status:string;amount:string}[];chargebacks?:unknown[]};
+}
+export function normalizeOrder(r:ProviderOrder,order:Order,env:Env):Payment{
+ if(!/^ORDTST[A-Z0-9]{10,64}$/.test(r.id)||r.type!=='online'||r.processing_mode!=='manual'||r.currency!=='PEN'||r.country_code!=='PER'||String(r.user_id)!==env.MERCADOPAGO_COLLECTOR_ID||String(r.integration_data?.application_id)!==env.MERCADOPAGO_APPLICATION_ID||r.external_reference!==order.external_reference||r.total_amount!=='67.00'||(order.provider_order_id&&order.provider_order_id!==r.id))throw new HttpError(422,'Order no corresponde a esta compra de prueba');
+ if(!Array.isArray(r.items)||r.items.length!==1||r.items[0].external_code!==PRODUCT.sku||r.items[0].quantity!==1||r.items[0].unit_price!=='67.00')throw new HttpError(422,'Producto incorrecto');
+ const tx=r.transactions;const refunded=r.status==='refunded'||r.status_detail==='partially_refunded'||Boolean(tx?.refunds?.some(x=>x.status==='processed'))||Boolean(tx?.chargebacks?.length);
+ const accredited=r.status==='processed'&&r.status_detail==='accredited'&&r.total_paid_amount==='67.00'&&tx?.payments?.length===1&&tx.payments[0].status==='processed'&&tx.payments[0].status_detail==='accredited'&&tx.payments[0].amount==='67.00'&&tx.payments[0].paid_amount==='67.00';
+ return {id:r.id,status:refunded?'refunded':r.status==='canceled'?'cancelled':accredited?'approved':'pending',transaction_amount:67,currency_id:r.currency,collector_id:r.user_id,external_reference:r.external_reference,live_mode:false,date_last_updated:r.last_updated_date,additional_info:{items:[{id:PRODUCT.sku,quantity:1}]}};
+}
+export async function reconcile(env:Env,userId:string,localId:string){
+ testPaymentConfig(env);
+ const order=await env.DB.prepare('SELECT * FROM orders WHERE id=? AND user_id=?').bind(localId,userId).first<Order>();
+ if(!order)throw new HttpError(404,'Orden no encontrada');
+ if(!order.provider_order_id)return {status:'pending'};
+ const r=await mpFetch(env,'/v1/orders/'+encodeURIComponent(order.provider_order_id)) as unknown as ProviderOrder;
+ // Consulta de estado: no concede acceso hasta recibir un webhook firmado; sí revoca por devolución.
+ const p=normalizeOrder(r,order,env);
+ if(p.status==='refunded'||p.status==='cancelled')await applyPayment(env,p,'reconcile:'+r.id+':'+r.last_updated_date);
+ return {status:p.status==='approved'?'awaiting_notification':p.status};
 }
 export async function applyPayment(env:Env,payment:Payment,eventKey:string){
  const order=await env.DB.prepare('SELECT * FROM orders WHERE external_reference=?').bind(payment.external_reference).first<Order>();
@@ -58,8 +101,13 @@ export async function applyPayment(env:Env,payment:Payment,eventKey:string){
 }
 export async function webhook(request:Request,env:Env){
  testPaymentConfig(env);const {id,requestId}=await verifySignature(request,env.MERCADOPAGO_WEBHOOK_SECRET!);
- if(new URL(request.url).searchParams.get('type')!=='payment')throw new HttpError(400,'Tópico no soportado');
- const payment=await mpFetch(env,'/v1/payments/'+encodeURIComponent(id)) as unknown as Payment;
- if(String(payment.id)!==id)throw new HttpError(422,'Recurso incorrecto');
- await applyPayment(env,payment,requestId+':'+id+':'+payment.date_last_updated);return {received:true};
+ if(new URL(request.url).searchParams.get('type')!=='order')throw new HttpError(400,'Tópico no soportado');
+ const event=await bodyJSON(request,32768);
+ if(event.type!=='order'||event.live_mode!==false||typeof event.data!=='object'||event.data===null||String((event.data as {id?:unknown}).id).toLowerCase()!==id.toLowerCase())throw new HttpError(422,'Evento incompatible con pruebas');
+ const resource=await mpFetch(env,'/v1/orders/'+encodeURIComponent(id)) as unknown as ProviderOrder;
+ if(resource.id.toLowerCase()!==id.toLowerCase())throw new HttpError(422,'Recurso incorrecto');
+ const order=await env.DB.prepare('SELECT * FROM orders WHERE external_reference=?').bind(resource.external_reference).first<Order>();
+ if(!order)throw new HttpError(422,'Orden desconocida');
+ const payment=normalizeOrder(resource,order,env);
+ await applyPayment(env,payment,requestId+':'+resource.id+':'+resource.last_updated_date);return {received:true};
 }

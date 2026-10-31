@@ -33,3 +33,6 @@ El propietario reemplaza la marca del plan original por Sistema Zenit. La instru
 Corrección de transcripción: el dominio verificado es sistemazenit.com; la marca correcta es Sistema Zenit. La transcripción Xenic era incorrecta. Se conserva funcionesdesdecero.sistemazenit.com y la paleta azul/naranja/amarillo.
 
 Despliegue inicial: Pages con Functions adaptando el mismo Worker, compatible con el flujo GitHub ya abierto por el propietario. No cambia el modelo D1 ni el control de acceso. Se separa la configuración local Worker de la configuración Pages para no publicar un UUID D1 de reserva.
+
+## Actualización Orders — 31 de octubre de 2026
+Se reemplazó la integración Preferences por Checkout Pro Orders conforme a la aplicación creada en el panel. 78 pruebas locales aprobadas y compilación Pages correcta. Base D1 de pruebas creada y migrada, producto inactivo. Cuenta de identidad, secretos, webhook y compra simulada contra Mercado Pago siguen pendientes. Véase docs/payment-runbook.md; sustituye las decisiones previas de Preferences. PAYMENTS_ENABLED continúa false.

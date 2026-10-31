@@ -10,3 +10,5 @@ POST /api/checkout/mercadopago: sesión; únicamente entorno sandbox configurado
 POST /api/webhooks/mercadopago: únicamente sandbox, firma HMAC, consulta de pago y actualización D1 transaccional.
 
 Todavía no se expone un botón para comprar. No están implementados Yape, streaming privado, conciliación programada, administración de accesos ni límites distribuidos. Los fallos de configuración impiden acceder o comprar.
+
+Checkout Orders requiere Idempotency-Key UUID y usuario autorizado de prueba. POST /api/orders/:id/reconcile permite consultar solo órdenes propias; no concede acceso por retorno ni por consulta aislada.

@@ -21,3 +21,6 @@ No se considera una fase completa mientras falte su evidencia externa obligatori
 
 ## Hito de publicación
 DONE: primer commit/push a main, Pages con Functions, dominio personalizado, validación HTTPS y muestra en navegador. Cuenta Cloudflare y repositorio conectados mediante integración existente. TODO: verificar visibilidad privada y protecciones GitHub, CI remoto, proveedor identidad, D1 remoto y criterios de lanzamiento.
+
+## Actualización Orders — 31 de octubre de 2026
+Se reemplazó la integración Preferences por Checkout Pro Orders conforme a la aplicación creada en el panel. 78 pruebas locales aprobadas y compilación Pages correcta. Base D1 de pruebas creada y migrada, producto inactivo. Cuenta de identidad, secretos, webhook y compra simulada contra Mercado Pago siguen pendientes. Véase docs/payment-runbook.md; sustituye las decisiones previas de Preferences. PAYMENTS_ENABLED continúa false.

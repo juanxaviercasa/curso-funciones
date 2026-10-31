@@ -43,3 +43,6 @@ Se aplicaron ambas migraciones en D1 local. TypeScript, pruebas y build se ejecu
 - Prueba visible en navegador público: muestra responde «¡Correcto!» al introducir 11.
 - Autenticación real, binding D1 remoto, Mercado Pago, Yape, videos y controles de lanzamiento continúan pendientes. No se activaron compras ni se añadieron secretos.
 - Los próximos pushes a main activan la compilación y publicación automática.
+
+## Actualización Orders — 31 de octubre de 2026
+Se reemplazó la integración Preferences por Checkout Pro Orders conforme a la aplicación creada en el panel. 78 pruebas locales aprobadas y compilación Pages correcta. Base D1 de pruebas creada y migrada, producto inactivo. Cuenta de identidad, secretos, webhook y compra simulada contra Mercado Pago siguen pendientes. Véase docs/payment-runbook.md; sustituye las decisiones previas de Preferences. PAYMENTS_ENABLED continúa false.

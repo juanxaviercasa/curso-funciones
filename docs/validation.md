@@ -18,3 +18,6 @@ Resultado del último check: 47 pruebas aprobadas en tres archivos, TypeScript s
 
 ## Actualización: publicación verificada
 El primer push a main y el despliegue Cloudflare Pages ya se realizaron. Ambas URLs publicadas responden por HTTPS y la muestra se verificó en navegador. Se conservan las 47 pruebas locales aprobadas y la compilación de Pages Functions. Las afirmaciones anteriores de ausencia de push/URL staging corresponden al hito local previo. Véase docs/deployment.md.
+
+## Actualización Orders — 31 de octubre de 2026
+Se reemplazó la integración Preferences por Checkout Pro Orders conforme a la aplicación creada en el panel. 78 pruebas locales aprobadas y compilación Pages correcta. Base D1 de pruebas creada y migrada, producto inactivo. Cuenta de identidad, secretos, webhook y compra simulada contra Mercado Pago siguen pendientes. Véase docs/payment-runbook.md; sustituye las decisiones previas de Preferences. PAYMENTS_ENABLED continúa false.

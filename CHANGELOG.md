@@ -11,3 +11,9 @@
 - Sistema Zenit en navegación, pie, páginas y metadatos.
 - Paleta azul con acentos naranja y amarillo; símbolo Z y detalles de energía visual.
 - Mensajes centrados en comprensión, práctica y avance.
+
+## Orders — 2026-10-31
+- Migración a Checkout Pro Orders, idempotencia persistente, firma alfanumérica y validación de aplicación/vendedor/importe.
+- Botón sandbox restringido a identidad autorizada y configuración explícita.
+- D1 de pruebas creada y migrada; cobros permanecen desactivados.
+- 78 pruebas aprobadas.
