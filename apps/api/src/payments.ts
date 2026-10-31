@@ -32,7 +32,14 @@ export async function mpFetch(env:Env,pathname:string,options:RequestInit={}){
  const headers=new Headers(options.headers);headers.set('Authorization','Bearer '+env.MERCADOPAGO_ACCESS_TOKEN);headers.set('Content-Type','application/json');
  let response:Response;
  try{response=await fetch('https://api.mercadopago.com'+pathname,{...options,headers,signal:AbortSignal.timeout(10000)});}catch{throw new HttpError(502,'No se pudo consultar Mercado Pago; reintenta con la misma solicitud');}
- if(!response.ok)throw new HttpError(502,'Mercado Pago no respondió correctamente');return response.json() as Promise<Record<string,unknown>>;
+ if(!response.ok){
+  // Solo códigos técnicos: nunca cuerpos, cabeceras ni credenciales del proveedor.
+  let code='unknown';
+  try{const error=await response.json() as {error?:unknown;errors?:{code?:unknown}[];cause?:{code?:unknown}[]};const value=error.error??error.errors?.[0]?.code??error.cause?.[0]?.code;if(typeof value==='string'&&/^[a-zA-Z0-9_.-]{1,80}$/.test(value))code=value;}catch{/* Respuesta no JSON. */}
+  console.warn('mercadopago_request_rejected',{status:response.status,code});
+  throw new HttpError(502,'Mercado Pago rechazó la solicitud (HTTP '+response.status+', código '+code+')');
+ }
+ try{return await response.json() as Record<string,unknown>;}catch{throw new HttpError(502,'Mercado Pago devolvió una respuesta no válida');}
 }
 export function orderBody(order:Order,origin:string){
  const result=origin+'/pago/resultado';
