@@ -27,13 +27,13 @@ export async function verifySignature(request:Request,secret:string,now=Date.now
  const parts=sig.split(',').map(p=>p.trim().split('='));
  const ts=parts.filter(p=>p[0]==='ts'),v1=parts.filter(p=>p[0]==='v1');
  const match=ts.length===1&&v1.length===1&&/^\d{10}(?:\d{3})?$/.test(ts[0][1])&&/^[a-fA-F0-9]{64}$/.test(v1[0][1])?['',ts[0][1],v1[0][1]]:null;
- if(!id||!validOrderId(id.toUpperCase(),live)||!rid||!/^[-a-zA-Z0-9]{1,128}$/.test(rid)||!match)throw new HttpError(401,'Firma inválida');
+ if(!id||!validOrderId(id.toUpperCase(),live)||!rid||!/^[-a-zA-Z0-9]{1,128}$/.test(rid)||!match){console.warn('mp_signature_rejected',{reason:'format'});throw new HttpError(401,'Firma inválida');}
  const milliseconds=Number(match[1])*(match[1].length===10?1000:1);
- if(Math.abs(now-milliseconds)>300000)throw new HttpError(401,'Notificación expirada');
+ if(Math.abs(now-milliseconds)>300000){console.warn('mp_signature_rejected',{reason:'expired'});throw new HttpError(401,'Notificación expirada');}
  const encoder=new TextEncoder();const key=await crypto.subtle.importKey('raw',encoder.encode(secret),{name:'HMAC',hash:'SHA-256'},false,['verify']);
  const bytes=new Uint8Array(match[2].match(/../g)!.map(v=>parseInt(v,16)));
  const valid=await crypto.subtle.verify('HMAC',key,bytes,encoder.encode('id:'+id.toLowerCase()+';request-id:'+rid+';ts:'+match[1]+';'));
- if(!valid)throw new HttpError(401,'Firma inválida');return {id,requestId:rid};
+ if(!valid){console.warn('mp_signature_rejected',{reason:'hmac'});throw new HttpError(401,'Firma inválida');}return {id,requestId:rid};
 }
 export async function mpFetch(env:Env,pathname:string,options:RequestInit={}){
  const headers=new Headers(options.headers);headers.set('Authorization','Bearer '+env.MERCADOPAGO_ACCESS_TOKEN);headers.set('Content-Type','application/json');
