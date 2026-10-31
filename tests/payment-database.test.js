@@ -99,3 +99,35 @@ it('editor y bitácora se revierten juntos si falla la escritura',async()=>{
  await expect(saveLesson(env,actor,before.id,{title:'Nuevo',body:'Nuevo texto',previousTitle:before.title,previousBody:before.body})).rejects.toThrow();
  expect(sqlite.prepare('SELECT body FROM lessons WHERE id=?').get(before.id).body).toBe(before.body);
 });
+
+const draftInput={lessonId:'l1',kind:'multiple_choice',prompt:'Pregunta de borrador',options:['Primera','Segunda'],expected:null,explanation:'',source:'Referencia pendiente',rights:'pending'};
+function draftSetup(){sqlite.exec(readFileSync('database/migrations/0002_training.sql','utf8'));sqlite.exec(readFileSync('database/migrations/0005_question_drafts.sql','utf8'));}
+it('borradores admiten clave ausente y no se exponen al alumno ni alteran preguntas publicadas',async()=>{
+ const {saveDraft,listDrafts}=await import('../apps/api/src/question-drafts');draftSetup();
+ const actor={id:'alice',role:'admin'};const before=await outline(env,'bob');
+ const saved=await saveDraft(env,actor,draftInput);expect(saved.revision).toBe(1);
+ expect((await listDrafts(env,actor)).length).toBe(1);
+ expect(await outline(env,'bob')).toEqual(before);
+ expect(sqlite.prepare('SELECT COUNT(*) n FROM questions').get().n).toBe(6);
+ await expect(listDrafts(env,{id:'bob',role:'student'})).rejects.toThrow('No autorizado');
+ await expect(saveDraft(env,{id:'bob',role:'student'},draftInput)).rejects.toThrow('No autorizado');
+});
+it('borradores validan números, alternativas y detectan conflicto de revisión',async()=>{
+ const {saveDraft,validateDraft}=await import('../apps/api/src/question-drafts');draftSetup();const actor={id:'alice',role:'admin'};
+ for(const expected of ['NaN','Infinity','1e999','<script>'])expect(()=>validateDraft({...draftInput,kind:'exact_number',options:[],expected})).toThrow();
+ expect(()=>validateDraft({...draftInput,expected:'9'})).toThrow();
+ expect(()=>validateDraft({...draftInput,options:['Una']})).toThrow();
+ expect(validateDraft({...draftInput,kind:'exact_number',options:[],expected:'-2,5'}).expected).toBe('-2,5');
+ const saved=await saveDraft(env,actor,draftInput);
+ await saveDraft(env,actor,{...draftInput,...saved,expected:'1'});
+ await expect(saveDraft(env,actor,{...draftInput,...saved})).rejects.toThrow('otra edición');
+ expect(sqlite.prepare('SELECT revision FROM question_drafts WHERE id=?').get(saved.id).revision).toBe(2);
+ expect(sqlite.prepare('SELECT COUNT(*) n FROM admin_audit_logs').get().n).toBe(2);
+ await expect(saveDraft(env,actor,{...draftInput,lessonId:'missing'})).rejects.toThrow('Lección no encontrada');
+});
+it('fallo de auditoría revierte la creación del borrador',async()=>{
+ const {saveDraft}=await import('../apps/api/src/question-drafts');draftSetup();
+ sqlite.exec("CREATE TRIGGER fail_draft_audit BEFORE INSERT ON admin_audit_logs BEGIN SELECT RAISE(ABORT,'test'); END;");
+ await expect(saveDraft(env,{id:'alice',role:'admin'},draftInput)).rejects.toThrow();
+ expect(sqlite.prepare('SELECT COUNT(*) n FROM question_drafts').get().n).toBe(0);
+});
