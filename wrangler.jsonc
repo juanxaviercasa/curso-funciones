@@ -4,7 +4,9 @@
   "compatibility_date": "2026-10-30",
   "vars": {
     "APP_ENV": "staging",
-    "PRODUCTION_CHECKOUT_PREVIEW": "enabled",
+    "PRODUCTION_CHECKOUT_PREVIEW": "disabled",
+    "PRODUCTION_WEBHOOKS_ENABLED": "false",
+    "PRODUCTION_CHECKOUT_ENABLED": "disabled",
     "PAYMENTS_ENABLED": "sandbox",
     "APP_ORIGIN": "https://funcionesdesdecero.sistemazenit.com",
     "MERCADOPAGO_APPLICATION_ID": "2791232750953301",
@@ -16,7 +18,7 @@
     "preview": {
       "vars": {
         "APP_ENV": "staging",
-    "PRODUCTION_CHECKOUT_PREVIEW": "enabled",
+    "PRODUCTION_CHECKOUT_PREVIEW": "disabled",
         "PAYMENTS_ENABLED": "false"
       }
     }

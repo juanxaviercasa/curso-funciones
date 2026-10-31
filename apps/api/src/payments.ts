@@ -1,26 +1,33 @@
 import {PRODUCT} from '../../../packages/shared/product';
 import {HttpError,bodyJSON,type Env} from './types';
-export interface Order {id:string;user_id:string;sku:string;amount_minor:number;currency:string;external_reference:string;provider:string;provider_order_id?:string|null;checkout_key?:string;}
+export interface Order {id:string;user_id:string;sku:string;amount_minor:number;currency:string;external_reference:string;provider:string;provider_order_id?:string|null;checkout_key?:string;payment_environment?:'sandbox'|'production';}
 export interface Payment {id:number|string;status:string;transaction_amount:number;currency_id:string;collector_id:number|string;external_reference:string;live_mode:boolean;date_last_updated:string;transaction_amount_refunded?:number;additional_info?:{items?:{id?:string;quantity?:number|string}[]};}
 export function testPaymentConfig(env:Env){
- // La primera versión solo permite sandbox. Producción requiere una revisión explícita del código y GO del propietario.
+ // El checkout sandbox conserva sus credenciales y controles independientes.
  if(env.APP_ENV==='production'||env.PAYMENTS_ENABLED!=='sandbox'||!env.MERCADOPAGO_ACCESS_TOKEN||!env.MERCADOPAGO_WEBHOOK_SECRET||!env.MERCADOPAGO_COLLECTOR_ID||!env.MERCADOPAGO_APPLICATION_ID||!env.APP_ORIGIN?.startsWith('https://'))throw new HttpError(503,'Pagos de prueba pendientes de configuración');
+}
+export function validOrderId(value:unknown,live=false){
+ return typeof value==='string'&&(live?/^ORD(?!TST)[A-Z0-9]{10,64}$/:/^ORDTST[A-Z0-9]{10,64}$/).test(value);
+}
+export function productionPaymentConfig(env:Env){
+ if(env.PRODUCTION_WEBHOOKS_ENABLED!=='true'||!env.MERCADOPAGO_PRODUCTION_ACCESS_TOKEN||!env.MERCADOPAGO_PRODUCTION_WEBHOOK_SECRET||!env.APP_ORIGIN?.startsWith('https://'))throw new HttpError(503,'Confirmación de pagos reales pendiente de configuración');
+ return {...env,MERCADOPAGO_ACCESS_TOKEN:env.MERCADOPAGO_PRODUCTION_ACCESS_TOKEN,MERCADOPAGO_WEBHOOK_SECRET:env.MERCADOPAGO_PRODUCTION_WEBHOOK_SECRET,MERCADOPAGO_COLLECTOR_ID:'291342046',MERCADOPAGO_APPLICATION_ID:'2136866391679868'};
 }
 export function validatePayment(payment:Payment,order:Order,collector:string){
  if(order.provider!=='mercadopago'||order.sku!==PRODUCT.sku||order.amount_minor!==6700||order.currency!=='PEN')throw new HttpError(422,'Orden incompatible');
- if(!/^ORDTST[A-Z0-9]{10,64}$/.test(String(payment.id))||payment.live_mode!==false||String(payment.collector_id)!==collector||payment.external_reference!==order.external_reference||payment.currency_id!=='PEN'||payment.transaction_amount!==67)throw new HttpError(422,'Pago no corresponde a la orden');
+ if(!validOrderId(String(payment.id),order.payment_environment==='production')||payment.live_mode!==(order.payment_environment==='production')||String(payment.collector_id)!==collector||payment.external_reference!==order.external_reference||payment.currency_id!=='PEN'||payment.transaction_amount!==67)throw new HttpError(422,'Pago no corresponde a la orden');
  const items=payment.additional_info?.items;
  if(items && (items.length!==1||items[0].id!==PRODUCT.sku||Number(items[0].quantity)!==1))throw new HttpError(422,'Producto incorrecto');
  const timestamp=Date.parse(payment.date_last_updated);if(!Number.isFinite(timestamp))throw new HttpError(422,'Fecha inválida');
  const status=['refunded','charged_back','cancelled'].includes(payment.status)||Number(payment.transaction_amount_refunded)>0?'revoked':payment.status==='approved'?'approved':'pending';
  return {status,updated:new Date(timestamp).toISOString()};
 }
-export async function verifySignature(request:Request,secret:string,now=Date.now()){
+export async function verifySignature(request:Request,secret:string,now=Date.now(),live=false){
  const url=new URL(request.url);const id=url.searchParams.get('data.id');const rid=request.headers.get('x-request-id');const sig=request.headers.get('x-signature')||'';
  const parts=sig.split(',').map(p=>p.trim().split('='));
  const ts=parts.filter(p=>p[0]==='ts'),v1=parts.filter(p=>p[0]==='v1');
  const match=ts.length===1&&v1.length===1&&/^\d{10}(?:\d{3})?$/.test(ts[0][1])&&/^[a-fA-F0-9]{64}$/.test(v1[0][1])?['',ts[0][1],v1[0][1]]:null;
- if(!id||!/^ORDTST[A-Z0-9]{10,64}$/i.test(id)||!rid||!/^[-a-zA-Z0-9]{1,128}$/.test(rid)||!match)throw new HttpError(401,'Firma inválida');
+ if(!id||!validOrderId(id.toUpperCase(),live)||!rid||!/^[-a-zA-Z0-9]{1,128}$/.test(rid)||!match)throw new HttpError(401,'Firma inválida');
  const milliseconds=Number(match[1])*(match[1].length===10?1000:1);
  if(Math.abs(now-milliseconds)>300000)throw new HttpError(401,'Notificación expirada');
  const encoder=new TextEncoder();const key=await crypto.subtle.importKey('raw',encoder.encode(secret),{name:'HMAC',hash:'SHA-256'},false,['verify']);
@@ -47,24 +54,29 @@ export function orderBody(order:Order,origin:string){
  items:[{external_code:PRODUCT.sku,title:PRODUCT.name,quantity:1,unit_price:'67.00'}],
  config:{online:{success_url:result,failure_url:result,pending_url:result,auto_return:'approved'}}};
 }
-export function checkoutURL(value:unknown,id:string){
- if(typeof value!=='string')throw new HttpError(502,'Checkout de prueba no disponible');
+export function checkoutURL(value:unknown,id:string,live=false){
+ if(typeof value!=='string')throw new HttpError(502,'Checkout no disponible');
  const url=new URL(value);
- if(!/^ORDTST[A-Z0-9]{10,64}$/.test(id)||url.protocol!=='https:'||url.hostname!=='www.mercadopago.com.pe'||url.port||url.username||url.password||url.pathname!=='/checkout/v1/redirect'||url.searchParams.get('order_id')!==id)throw new HttpError(502,'Checkout de prueba no válido');
+ if(!validOrderId(id,live)||url.protocol!=='https:'||url.hostname!=='www.mercadopago.com.pe'||url.port||url.username||url.password||url.pathname!=='/checkout/v1/redirect'||url.searchParams.get('order_id')!==id)throw new HttpError(502,'Checkout no válido');
  return url.href;
 }
-export async function checkout(env:Env,userId:string,key:unknown){
- testPaymentConfig(env);
- if(!env.PAYMENT_TEST_USER_IDS?.split(',').map(x=>x.trim()).includes(userId))throw new HttpError(403,'Compra de prueba reservada a usuarios autorizados');
+export async function checkout(env:Env,userId:string,key:unknown,live=false){
+ if(live){
+  env=productionPaymentConfig(env);
+  if(env.PRODUCTION_CHECKOUT_ENABLED!=='restricted')throw new HttpError(503,'Compra real aún desactivada');
+ }else testPaymentConfig(env);
+ const allowed=live?env.PRODUCTION_PAYMENT_USER_IDS:env.PAYMENT_TEST_USER_IDS;
+ if(!allowed?.split(',').map(x=>x.trim()).includes(userId))throw new HttpError(403,'Compra de prueba reservada a usuarios autorizados');
  if(typeof key!=='string'||! /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(key))throw new HttpError(400,'Se requiere Idempotency-Key UUID');
  const product=await env.DB.prepare('SELECT price_minor,currency,active FROM products WHERE sku=?').bind(PRODUCT.sku).first<{price_minor:number;currency:string;active:number}>();
  if(!product?.active||product.price_minor!==6700||product.currency!=='PEN')throw new HttpError(503,'Producto no disponible');
- await env.DB.prepare('INSERT INTO orders(id,user_id,sku,amount_minor,currency,provider,external_reference,checkout_key) VALUES(?,?,?,?,?,?,?,?) ON CONFLICT(user_id,checkout_key) DO NOTHING').bind(crypto.randomUUID(),userId,PRODUCT.sku,6700,'PEN','mercadopago',crypto.randomUUID(),key).run();
+ await env.DB.prepare('INSERT INTO orders(id,user_id,sku,amount_minor,currency,provider,external_reference,checkout_key,payment_environment) VALUES(?,?,?,?,?,?,?,?,?) ON CONFLICT(user_id,checkout_key) DO NOTHING').bind(crypto.randomUUID(),userId,PRODUCT.sku,6700,'PEN','mercadopago',crypto.randomUUID(),key,live?'production':'sandbox').run();
  const order=await env.DB.prepare('SELECT * FROM orders WHERE user_id=? AND checkout_key=?').bind(userId,key).first<Order>();
  if(!order)throw new HttpError(500,'No se pudo recuperar la orden');
+ if((order.payment_environment||'sandbox')!==(live?'production':'sandbox'))throw new HttpError(409,'La solicitud pertenece a otro entorno de pagos');
  // El UUID interno se reutiliza como idempotencia del proveedor incluso después de un timeout.
  const resource=await mpFetch(env,'/v1/orders',{method:'POST',headers:{'X-Idempotency-Key':order.id},body:JSON.stringify(orderBody(order,env.APP_ORIGIN!))});
- const id=String(resource.id||'');const target=checkoutURL(resource.checkout_url,id);
+ const id=String(resource.id||'');const target=checkoutURL(resource.checkout_url,id,live);
  normalizeOrder(resource as unknown as ProviderOrder,order,env);
  await env.DB.prepare('UPDATE orders SET provider_order_id=? WHERE id=? AND (provider_order_id IS NULL OR provider_order_id=?)').bind(id,order.id,id).run();
  return {orderId:order.id,checkoutUrl:target};
@@ -77,16 +89,16 @@ export interface ProviderOrder {
 }
 function isCourseAmount(value:unknown){return typeof value==='string' && /^67(?:\.0{1,2})?$/.test(value);}
 export function normalizeOrder(r:ProviderOrder,order:Order,env:Env):Payment{
- if(!/^ORDTST[A-Z0-9]{10,64}$/.test(r.id)||r.type!=='online'||r.processing_mode!=='manual'||r.currency!=='PEN'||r.country_code!=='PER'||String(r.user_id)!==env.MERCADOPAGO_COLLECTOR_ID||String(r.integration_data?.application_id)!==env.MERCADOPAGO_APPLICATION_ID||r.external_reference!==order.external_reference||!isCourseAmount(r.total_amount)||(order.provider_order_id&&order.provider_order_id!==r.id))throw new HttpError(422,'Order no corresponde a esta compra de prueba');
+ if(!validOrderId(r.id,order.payment_environment==='production')||r.type!=='online'||r.processing_mode!=='manual'||r.currency!=='PEN'||r.country_code!=='PER'||String(r.user_id)!==env.MERCADOPAGO_COLLECTOR_ID||String(r.integration_data?.application_id)!==env.MERCADOPAGO_APPLICATION_ID||r.external_reference!==order.external_reference||!isCourseAmount(r.total_amount)||(order.provider_order_id&&order.provider_order_id!==r.id))throw new HttpError(422,'Order no corresponde a esta compra');
  if(!Array.isArray(r.items)||r.items.length!==1||r.items[0].external_code!==PRODUCT.sku||r.items[0].quantity!==1||!isCourseAmount(r.items[0].unit_price))throw new HttpError(422,'Producto incorrecto');
  const tx=r.transactions;const refunded=r.status==='refunded'||r.status_detail==='partially_refunded'||Boolean(tx?.refunds?.some(x=>x.status==='processed'))||Boolean(tx?.chargebacks?.length);
  const accredited=r.status==='processed'&&r.status_detail==='accredited'&&isCourseAmount(r.total_paid_amount)&&tx?.payments?.length===1&&tx.payments[0].status==='processed'&&tx.payments[0].status_detail==='accredited'&&isCourseAmount(tx.payments[0].amount)&&isCourseAmount(tx.payments[0].paid_amount);
- return {id:r.id,status:refunded?'refunded':r.status==='canceled'?'cancelled':accredited?'approved':'pending',transaction_amount:67,currency_id:r.currency,collector_id:r.user_id,external_reference:r.external_reference,live_mode:false,date_last_updated:r.last_updated_date,additional_info:{items:[{id:PRODUCT.sku,quantity:1}]}};
+ return {id:r.id,status:refunded?'refunded':r.status==='canceled'?'cancelled':accredited?'approved':'pending',transaction_amount:67,currency_id:r.currency,collector_id:r.user_id,external_reference:r.external_reference,live_mode:order.payment_environment==='production',date_last_updated:r.last_updated_date,additional_info:{items:[{id:PRODUCT.sku,quantity:1}]}};
 }
 export async function reconcile(env:Env,userId:string,localId:string){
- testPaymentConfig(env);
  const order=await env.DB.prepare('SELECT * FROM orders WHERE id=? AND user_id=?').bind(localId,userId).first<Order>();
  if(!order)throw new HttpError(404,'Orden no encontrada');
+ if(order.payment_environment==='production')env=productionPaymentConfig(env);else testPaymentConfig(env);
  if(!order.provider_order_id)return {status:'pending'};
  const r=await mpFetch(env,'/v1/orders/'+encodeURIComponent(order.provider_order_id)) as unknown as ProviderOrder;
  // Recupera una confirmación ya firmada tras consultar nuevamente el recurso al proveedor.
@@ -98,7 +110,8 @@ export async function reconcile(env:Env,userId:string,localId:string){
 export async function applyPayment(env:Env,payment:Payment,eventKey:string){
  const order=await env.DB.prepare('SELECT * FROM orders WHERE external_reference=?').bind(payment.external_reference).first<Order>();
  if(!order)throw new HttpError(422,'Orden desconocida');
- const checked=validatePayment(payment,order,env.MERCADOPAGO_COLLECTOR_ID!);
+ const collector=order.payment_environment==='production'?productionPaymentConfig(env).MERCADOPAGO_COLLECTOR_ID:env.MERCADOPAGO_COLLECTOR_ID;
+ const checked=validatePayment(payment,order,collector!);
  // batch es transaccional en D1. Cada acceso pertenece a una orden, de modo que una devolución no revoca otra compra válida.
  await env.DB.batch([
  env.DB.prepare("INSERT INTO payment_events(provider,event_key,resource_id,signature_valid,processed) VALUES('mercadopago',?,?,1,1) ON CONFLICT(provider,event_key) DO NOTHING").bind(eventKey,String(payment.id)),
@@ -108,15 +121,17 @@ export async function applyPayment(env:Env,payment:Payment,eventKey:string){
  env.DB.prepare("UPDATE entitlements SET active=0,updated_at=CURRENT_TIMESTAMP WHERE source_order_id=? AND NOT EXISTS(SELECT 1 FROM orders WHERE id=? AND status='approved')").bind(order.id,order.id)
  ]);
 }
-export async function webhook(request:Request,env:Env){
- testPaymentConfig(env);const {id,requestId}=await verifySignature(request,env.MERCADOPAGO_WEBHOOK_SECRET!);
+export async function webhook(request:Request,env:Env,live=false){
+ if(live)env=productionPaymentConfig(env);else testPaymentConfig(env);
+ const {id,requestId}=await verifySignature(request,env.MERCADOPAGO_WEBHOOK_SECRET!,Date.now(),live);
  if(new URL(request.url).searchParams.get('type')!=='order')throw new HttpError(400,'Tópico no soportado');
  const event=await bodyJSON(request,32768);
- if(event.type!=='order'||event.live_mode!==false||typeof event.data!=='object'||event.data===null||String((event.data as {id?:unknown}).id).toLowerCase()!==id.toLowerCase())throw new HttpError(422,'Evento incompatible con pruebas');
+ if(event.type!=='order'||event.live_mode!==live||typeof event.data!=='object'||event.data===null||String((event.data as {id?:unknown}).id).toLowerCase()!==id.toLowerCase())throw new HttpError(422,'Evento incompatible con el entorno de pagos');
  const resource=await mpFetch(env,'/v1/orders/'+encodeURIComponent(id)) as unknown as ProviderOrder;
  if(resource.id.toLowerCase()!==id.toLowerCase())throw new HttpError(422,'Recurso incorrecto');
  const order=await env.DB.prepare('SELECT * FROM orders WHERE external_reference=?').bind(resource.external_reference).first<Order>();
  if(!order)throw new HttpError(422,'Orden desconocida');
+ if((order.payment_environment||'sandbox')!==(live?'production':'sandbox'))throw new HttpError(422,'Entorno de pago incompatible');
  const payment=normalizeOrder(resource,order,env);
  await applyPayment(env,payment,requestId+':'+resource.id+':'+resource.last_updated_date);return {received:true};
 }

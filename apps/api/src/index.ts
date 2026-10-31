@@ -8,12 +8,14 @@ export async function handle(request:Request,env:Env):Promise<Response>{
  const url=new URL(request.url);const route=url.pathname;
  if(route==='/api/health'&&request.method==='GET')return json({ok:true,environment:env.APP_ENV,paymentsEnabled:false});
  if(route==='/api/product'&&request.method==='GET')return json({...PRODUCT,purchasable:false,yapeAvailable:false});
+ if(route==='/api/webhooks/mercadopago-production'&&request.method==='POST')return json(await webhook(request,env,true));
  if(route==='/api/webhooks/mercadopago'&&request.method==='POST')return json(await webhook(request,env));
  if(route.startsWith('/api/checkout')&&env.PAYMENTS_ENABLED!=='sandbox')throw new HttpError(503,'Integración de pagos pendiente');
  if(route==='/api/demo/answer'&&request.method==='POST'){sameOrigin(request,env);const body=await bodyJSON(request,512);return json(evaluateSample(body.answer));}
  if(route.startsWith('/api/')){
   if(!['GET','HEAD'].includes(request.method))sameOrigin(request,env);
   const user=await requireUser(request,env);
+  if(route==='/api/production-checkout'&&request.method==='POST')return json(await checkout(env,user.id,request.headers.get('Idempotency-Key'),true));
   if(route==='/api/production-checkout-preview'&&request.method==='POST')return json(await productionCheckoutPreview(env,user.id,request.headers.get('Idempotency-Key')));
   if(route==='/api/payment-method-diagnostic'&&request.method==='GET')return json(await paymentMethodDiagnostic(env,user.id));
   if(route==='/api/me'&&request.method==='GET'){
