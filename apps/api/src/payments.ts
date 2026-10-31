@@ -145,7 +145,7 @@ export async function productionCheckoutPreview(env:Env,userId:string,key:unknow
  const audit=await env.DB.prepare('SELECT resource_id FROM admin_audit_logs WHERE id=? AND actor_id=?').bind(auditId,userId).first<{resource_id:string}>();
  if(!audit)throw new HttpError(500,'No se pudo registrar la verificación');
  const body=orderBody({id:audit.resource_id,user_id:userId,sku:PRODUCT.sku,amount_minor:6700,currency:'PEN',external_reference:'preview_'+audit.resource_id,provider:'mercadopago'},env.APP_ORIGIN);
- const r=await mpFetch({...env,MERCADOPAGO_ACCESS_TOKEN:env.MERCADOPAGO_PRODUCTION_ACCESS_TOKEN},'/v1/orders',{method:'POST',headers:{'X-Idempotency-Key':audit.resource_id},body:JSON.stringify(body)}) as unknown as ProviderOrder & {checkout_url:string};
+ const r=await mpFetch({...env,MERCADOPAGO_ACCESS_TOKEN:env.MERCADOPAGO_PRODUCTION_ACCESS_TOKEN},'/v1/orders',{method:'POST',headers:{'X-Idempotency-Key':audit.resource_id+'-validref-v1'},body:JSON.stringify(body)}) as unknown as ProviderOrder & {checkout_url:string};
  if(!/^ORD[A-Z0-9]{10,64}$/.test(r.id)||r.id.startsWith('ORDTST')||r.type!=='online'||r.processing_mode!=='manual'||r.currency!=='PEN'||r.country_code!=='PER'||r.user_id!=='291342046'||String(r.integration_data?.application_id)!=='2136866391679868'||r.external_reference!==body.external_reference||!isCourseAmount(r.total_amount))throw new HttpError(422,'Checkout real incompatible');
  const url=new URL(r.checkout_url);
  if(url.origin!=='https://www.mercadopago.com.pe'||url.username||url.password||url.pathname!=='/checkout/v1/redirect'||url.searchParams.get('order_id')!==r.id)throw new HttpError(502,'URL de checkout no válida');

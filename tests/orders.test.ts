@@ -40,7 +40,7 @@ it('rechaza respuestas exitosas que no contienen JSON',async()=>{vi.stubGlobal('
 it('inspección real usa una referencia admitida y conserva la idempotencia',async()=>{
  const stable='98df761c-6c6c-4963-a26c-ab5181fa6519';
  const db={prepare:(sql:string)=>({bind:()=>({first:async()=>sql.includes('SELECT id')?{id:'audit-existing'}:{resource_id:stable},run:async()=>({success:true})})})};
- const mock=vi.fn().mockImplementation(async(_url,init)=>{const body=JSON.parse(init.body);expect(body.external_reference).toMatch(/^[a-zA-Z0-9_-]{1,64}$/);expect(init.headers.get('X-Idempotency-Key')).toBe(stable);return Response.json({...resource,id:'ORD0000000000123',user_id:'291342046',integration_data:{application_id:'2136866391679868'},external_reference:body.external_reference,checkout_url:'https://www.mercadopago.com.pe/checkout/v1/redirect?order_id=ORD0000000000123'});});
+ const mock=vi.fn().mockImplementation(async(_url,init)=>{const body=JSON.parse(init.body);expect(body.external_reference).toMatch(/^[a-zA-Z0-9_-]{1,64}$/);expect(init.headers.get('X-Idempotency-Key')).toBe(stable+'-validref-v1');return Response.json({...resource,id:'ORD0000000000123',user_id:'291342046',integration_data:{application_id:'2136866391679868'},external_reference:body.external_reference,checkout_url:'https://www.mercadopago.com.pe/checkout/v1/redirect?order_id=ORD0000000000123'});});
  vi.stubGlobal('fetch',mock);
  const result=await productionCheckoutPreview({...env,DB:db as unknown as D1Database,PRODUCTION_CHECKOUT_PREVIEW:'enabled',PAYMENT_TEST_USER_IDS:'alice',MERCADOPAGO_PRODUCTION_ACCESS_TOKEN:'fixture'},'alice',crypto.randomUUID());
  expect(result.inspectionOnly).toBe(true);expect(mock).toHaveBeenCalledTimes(1);
