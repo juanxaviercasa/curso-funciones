@@ -23,3 +23,6 @@ POST /api/webhooks/mercadopago-production recibe solo IDs ORD reales y live_mode
 La conciliación actual recupera notificaciones firmadas ya recibidas. No reemplaza una notificación ausente; reenvío del proveedor y operación de soporte siguen pendientes. No afirmar validación integral de producción antes del ensayo real.
 
 Fuente: https://www.mercadopago.com.pe/developers/es/docs/checkout-pro-orders/notifications?scope=prod
+
+## Actualización operativa
+Migración 0004 aplicada y verificada: cuatro órdenes anteriores permanecen sandbox. Webhook de producción guardado en Mercado Pago para Order. El propietario guardó MERCADOPAGO_PRODUCTION_WEBHOOK_SECRET cifrado en Cloudflare. Se habilita únicamente recepción de notificaciones; checkout real y checkout de inspección siguen disabled. Pendiente verificar firma mediante notificación del proveedor y ensayo real autorizado.
