@@ -22,4 +22,9 @@ Clerk gestiona identidad; Worker verifica la sesión y correo antes de crear el 
 Se incluyen cinco lecciones de texto y seis preguntas premium en D1, con autocorrección y progreso. El adaptador de pagos solo admite sandbox y permanece bloqueado hasta configurar la cuenta y validar pruebas. Producción está prohibida en código.
 
 ## Marca vigente
-Por instrucción del propietario, Sistema Zenit reemplaza la marca anterior. Azul profundo con acentos naranja y amarillo. El SKU MSV-FUN-001 se conserva como identificador técnico para no alterar órdenes o pruebas. El entrenamiento y precio S/67 permanecen. Dominio elegido: funcionesdesdecero.sistemazenit.com; reservado en DNS, pendiente conexión al despliegue.
+Por instrucción del propietario, Sistema Zenit reemplaza la marca anterior. Azul profundo con acentos naranja y amarillo. El SKU MSV-FUN-001 se conserva como identificador técnico para no alterar órdenes o pruebas. El entrenamiento y precio S/67 permanecen. Dominio elegido: funcionesdesdecero.sistemazenit.com; conectado al despliegue de vista previa.
+
+## Vista previa publicada
+https://funcionesdesdecero.sistemazenit.com
+
+Cloudflare Pages + Functions, integrado con main. Compras desactivadas. La demo funciona; el acceso privado requiere configurar identidad y base remota.

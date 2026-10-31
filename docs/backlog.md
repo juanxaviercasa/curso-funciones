@@ -18,3 +18,6 @@ No se considera una fase completa mientras falte su evidencia externa obligatori
 - Adaptador sandbox de Preferences y webhook transaccional: implementado, pendiente matriz D1/concurrencia y prueba integrada con proveedor.
 - Cinco lecciones originales de texto y seis ejercicios privados en D1; tres tipos (elección, numérico exacto, conjunto por selección). Videos y pistas escalonadas pendientes.
 - Conciliación, Turnstile/rate limit, R2, panel de revisión Yape, CI remoto y despliegue siguen TODO.
+
+## Hito de publicación
+DONE: primer commit/push a main, Pages con Functions, dominio personalizado, validación HTTPS y muestra en navegador. Cuenta Cloudflare y repositorio conectados mediante integración existente. TODO: verificar visibilidad privada y protecciones GitHub, CI remoto, proveedor identidad, D1 remoto y criterios de lanzamiento.

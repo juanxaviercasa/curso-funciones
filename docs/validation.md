@@ -15,3 +15,6 @@ Compras desactivadas. No se enviaron cambios a GitHub ni se configuraron claves,
 Siguiente intervención: acceso a Cloudflare para inspección de cuenta y staging; autorización antes de crear recursos/credenciales. Luego configurar proveedor de identidad y cuenta de pruebas de Mercado Pago en interfaces seguras.
 
 Resultado del último check: 47 pruebas aprobadas en tres archivos, TypeScript sin errores y build completado.
+
+## Actualización: publicación verificada
+El primer push a main y el despliegue Cloudflare Pages ya se realizaron. Ambas URLs publicadas responden por HTTPS y la muestra se verificó en navegador. Se conservan las 47 pruebas locales aprobadas y la compilación de Pages Functions. Las afirmaciones anteriores de ausencia de push/URL staging corresponden al hito local previo. Véase docs/deployment.md.
