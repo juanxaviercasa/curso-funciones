@@ -39,3 +39,6 @@ Cada máquina aporta un resumen reproducible de sus propios archivos. No copiar 
 
 ## Aceptación inmediata
 Informe de B integrado como contexto. No se afirma que sus laboratorios ya hayan sido portados. A mantiene el aula y backend actuales; B puede entregar FunctionsLab sin tocar las rutas de A. Próximo punto de coordinación: revisión de esa primera entrega y su conexión al aula.
+
+## Nueva tarea B
+Después de la entrega lineal 7b3e25f, desarrollar QuadraticLab conforme a docs/handoffs/labs-b-next-quadratic.md. B confirma inicio en su propia entrega. A mantiene las rutas de integración.

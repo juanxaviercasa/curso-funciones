@@ -1,0 +1,27 @@
+.zenit-lab-root { color: #173256; background: #fff; border: 1px solid #cad6e4; border-radius: 20px; padding: clamp(16px, 4vw, 32px); max-width: 960px; margin-inline: auto; font-family: system-ui, sans-serif; line-height: 1.6; }
+.zenit-lab-header { margin-bottom: 24px; }
+.zenit-lab-eyebrow { color: #864000; font-weight: 700; margin: 0 0 6px; }
+.zenit-lab-heading { font-size: clamp(1.4rem, 3vw, 2rem); line-height: 1.25; margin: 0 0 12px; }
+.zenit-lab-intro { margin: 0; }
+.zenit-lab-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); gap: 28px; align-items: start; }
+.zenit-lab-controls { min-width: 0; }
+.zenit-lab-formula { background: #edf4fc; border-left: 4px solid #c65500; border-radius: 8px; padding: 14px; margin: 0 0 20px; font-size: 1.3rem; font-weight: 750; font-variant-numeric: tabular-nums; }
+.zenit-lab-label { display: block; font-weight: 700; margin-top: 14px; }
+.zenit-lab-slider { display: block; width: 100%; min-height: 44px; margin: 0; accent-color: #18539a; cursor: pointer; }
+.zenit-lab-help, .zenit-lab-caption { font-size: .875rem; color: #465972; }
+.zenit-lab-description { min-height: 5em; }
+.zenit-lab-reset { font: inherit; font-weight: 650; min-height: 44px; padding: 9px 16px; border: 1px solid #173256; border-radius: 8px; color: #173256; background: #fff3cd; cursor: pointer; }
+.zenit-lab-reset:hover { background: #ffe59a; }
+.zenit-lab-reset:focus-visible, .zenit-lab-slider:focus-visible { outline: 3px solid #18539a; outline-offset: 4px; }
+.zenit-lab-figure { min-width: 0; margin: 0; }
+.zenit-lab-graph { display: block; width: 100%; height: auto; background: #f8fafd; border-radius: 12px; }
+.zenit-lab-grid { stroke: #d7e0ec; stroke-width: 1; }
+.zenit-lab-axis { stroke: #536981; stroke-width: 1.5; }
+.zenit-lab-tick { fill: #465972; font-size: 12px; }
+.zenit-lab-axis-label { fill: #173256; font-size: 14px; font-weight: 700; }
+.zenit-lab-curve { fill: none; stroke: #b54a00; stroke-width: 3; stroke-linejoin: round; stroke-linecap: round; }
+.zenit-lab-marker { fill: #173256; stroke: #fff; stroke-width: 2; }
+.zenit-lab-table { width: 100%; border-collapse: collapse; margin-top: 20px; font-variant-numeric: tabular-nums; table-layout: fixed; }
+.zenit-lab-table-caption { text-align: left; font-weight: 700; margin-bottom: 8px; }
+.zenit-lab-cell { padding: 8px 2px; text-align: center; border: 1px solid #cad6e4; overflow-wrap: anywhere; }
+@media (max-width: 620px) { .zenit-lab-layout { grid-template-columns: minmax(0, 1fr); gap: 16px; } }
