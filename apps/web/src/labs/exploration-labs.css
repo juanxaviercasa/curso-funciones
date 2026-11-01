@@ -1,0 +1,41 @@
+.zenit-lab-explore-root { box-sizing: border-box; width: 100%; max-width: 1100px; margin-inline: auto; padding: clamp(16px, 4vw, 32px); border: 1px solid #cad6e4; border-radius: 20px; background: #fff; color: #173256; font: 1rem/1.6 system-ui, sans-serif; }
+.zenit-lab-explore-header { display: block; margin-bottom: 24px; padding: 0; border: 0; }
+.zenit-lab-explore-eyebrow { margin: 0 0 8px; color: #864000; font-weight: 700; }
+.zenit-lab-explore-heading { margin: 0 0 14px; font-size: clamp(1.4rem, 3vw, 2rem); line-height: 1.25; }
+.zenit-lab-explore-intro { margin: 0; }
+.zenit-lab-explore-layout { display: grid; grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr); gap: 28px; align-items: start; }
+.zenit-lab-explore-controls, .zenit-lab-explore-visual { min-width: 0; }
+.zenit-lab-explore-label { display: block; margin: 16px 0 4px; font-weight: 700; }
+.zenit-lab-explore-select, .zenit-lab-explore-textarea { box-sizing: border-box; width: 100%; padding: 10px; border: 1px solid #536981; border-radius: 8px; background: #fff; color: #173256; font: inherit; min-height: 44px; }
+.zenit-lab-explore-textarea { display: block; resize: vertical; min-height: 90px; margin-bottom: 12px; }
+.zenit-lab-explore-formula { background: #edf4fc; padding: 14px; border-left: 4px solid #c65500; border-radius: 8px; font-weight: 700; overflow-wrap: anywhere; }
+.zenit-lab-explore-slider { box-sizing: border-box; display: block; width: 100%; min-height: 44px; padding: 0; margin: 0; accent-color: #18539a; cursor: pointer; }
+.zenit-lab-explore-button { display: inline-block; min-height: 44px; padding: 9px 16px; font: inherit; font-weight: 650; background: #fff3cd; color: #173256; border: 1px solid #173256; border-radius: 8px; box-shadow: none; cursor: pointer; }
+.zenit-lab-explore-button:hover { background: #ffe59a; }
+.zenit-lab-explore-button:disabled { background: #edf0f5; color: #53627b; cursor: not-allowed; box-shadow: none; }
+.zenit-lab-explore-button:focus-visible, .zenit-lab-explore-slider:focus-visible, .zenit-lab-explore-select:focus-visible, .zenit-lab-explore-textarea:focus-visible { outline: 3px solid #18539a; outline-offset: 4px; }
+.zenit-lab-explore-figure { margin: 0; }
+.zenit-lab-explore-graph { display: block; width: 100%; height: auto; background: #f8fafd; border-radius: 12px; }
+.zenit-lab-explore-grid { stroke: #d7e0ec; stroke-width: 1; }
+.zenit-lab-explore-axis { stroke: #536981; stroke-width: 1.5; }
+.zenit-lab-explore-tick { fill: #465972; font-size: 12px; }
+.zenit-lab-explore-base { fill: none; stroke: #18539a; stroke-width: 2; stroke-dasharray: 5 5; }
+.zenit-lab-explore-transformed { fill: none; stroke: #b54a00; stroke-width: 3; stroke-linejoin: round; stroke-linecap: round; }
+.zenit-lab-explore-pole { stroke: #775d81; stroke-width: 1; stroke-dasharray: 2 4; }
+.zenit-lab-explore-hole { fill: #fff; stroke: #b54a00; stroke-width: 2; }
+.zenit-lab-explore-endpoint { fill: #173256; stroke: #fff; stroke-width: 2; }
+.zenit-lab-explore-caption, .zenit-lab-explore-help { font-size: .875rem; color: #465972; overflow-wrap: anywhere; }
+.zenit-lab-explore-facts { margin: 20px 0 0; padding: 16px; border-radius: 10px; background: #edf4fc; }
+.zenit-lab-explore-fact { margin: 0 0 12px; overflow-wrap: anywhere; }
+.zenit-lab-explore-term { font-weight: 700; }
+.zenit-lab-explore-definition { margin: 0; }
+.zenit-lab-explore-table { width: 100%; border-collapse: collapse; table-layout: fixed; font-variant-numeric: tabular-nums; margin: 24px 0; }
+.zenit-lab-explore-table-caption { text-align: left; font-weight: 700; margin-bottom: 8px; }
+.zenit-lab-explore-cell { border: 1px solid #cad6e4; padding: 9px 4px; text-align: center; overflow-wrap: anywhere; }
+.zenit-lab-explore-activities { margin-top: 30px; }
+.zenit-lab-explore-subheading { margin: 0 0 16px; font-size: 1.3rem; }
+.zenit-lab-explore-activity { border: 1px solid #cad6e4; border-radius: 12px; padding: 16px; margin-bottom: 16px; }
+.zenit-lab-explore-activity-title { margin: 0; font-size: 1.1rem; }
+.zenit-lab-explore-feedback { padding: 14px; margin-top: 16px; background: #fff5d8; border-radius: 8px; }
+.zenit-lab-explore-status { font-weight: 700; }
+@media (max-width: 650px) { .zenit-lab-explore-layout { grid-template-columns: minmax(0, 1fr); gap: 20px; } }
