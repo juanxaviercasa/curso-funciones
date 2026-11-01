@@ -13,7 +13,8 @@
     "MERCADOPAGO_COLLECTOR_ID": "3765983297",
     "PAYMENT_TEST_USER_IDS": "8645cf99-8128-4362-aaad-9d45b0682652",
     "CLERK_PUBLISHABLE_KEY": "pk_test_YmV0dGVyLWNvbmRvci0xNTAzLmNsZXJrLmFjY291bnRzLmRldiQ",
-    "PRODUCTION_PAYMENT_EMAILS": "jxaviercabellos@gmail.com"
+    "PRODUCTION_PAYMENT_EMAILS": "jxaviercabellos@gmail.com",
+    "MEDIA_ENABLED": "true"
   },
   "env": {
     "preview": {
