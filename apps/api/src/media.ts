@@ -3,8 +3,8 @@ import {requireAdmin} from './admin';
 import {requireEntitlement} from './auth';
 type Actor={id:string;role:string};
 type Asset={id:string;lesson_id:string;kind:'video'|'material';object_key:string;filename:string;size_bytes:number};
-function storage(env:Env){if(env.MEDIA_ENABLED!=='true'||!env.PRIVATE_MEDIA||!env.MEDIA_SIGNING_KEY||env.MEDIA_SIGNING_KEY.length<32)throw new HttpError(503,'Medios privados pendientes de activar');return env.PRIVATE_MEDIA;}
-async function lesson(env:Env,id:string){const row=await env.DB.prepare("SELECT l.id,l.video_key FROM lessons l JOIN modules m ON m.id=l.module_id WHERE l.id=? AND m.sku='MSV-FUN-001'").bind(id).first<{id:string;video_key:string|null}>();if(!row)throw new HttpError(404,'Lección no encontrada');return row;}
+export function storage(env:Env){if(env.MEDIA_ENABLED!=='true'||!env.PRIVATE_MEDIA||!env.MEDIA_SIGNING_KEY||env.MEDIA_SIGNING_KEY.length<32)throw new HttpError(503,'Medios privados pendientes de activar');return env.PRIVATE_MEDIA;}
+export async function lesson(env:Env,id:string){const row=await env.DB.prepare("SELECT l.id,l.video_key FROM lessons l JOIN modules m ON m.id=l.module_id WHERE l.id=? AND m.sku='MSV-FUN-001'").bind(id).first<{id:string;video_key:string|null}>();if(!row)throw new HttpError(404,'Lección no encontrada');return row;}
 async function access(env:Env,actor:Actor){if(actor.role!=='admin')await requireEntitlement(env,actor.id);}
 export async function listAssets(env:Env,actor:Actor,id:string){await access(env,actor);if(env.MEDIA_ENABLED!=='true')return {enabled:false,assets:[]};storage(env);const l=await lesson(env,id);const rows=await env.DB.prepare("SELECT id,kind,filename,size_bytes FROM lesson_assets WHERE lesson_id=? AND (kind='material' OR object_key=?) ORDER BY created_at,id").bind(id,l.video_key).all();return {enabled:true,assets:rows.results};}
 export async function uploadAsset(request:Request,env:Env,actor:Actor,id:string){
@@ -31,7 +31,7 @@ export async function uploadAsset(request:Request,env:Env,actor:Actor,id:string)
 }
 function encode(bytes:Uint8Array){return btoa(String.fromCharCode(...bytes)).replaceAll('+','-').replaceAll('/','_').replaceAll('=','');}
 function decode(text:string){if(!/^[\w-]+$/.test(text))throw Error();return Uint8Array.from(atob(text.replaceAll('-','+').replaceAll('_','/')),c=>c.charCodeAt(0));}
-async function signingKey(env:Env){storage(env);return crypto.subtle.importKey('raw',new TextEncoder().encode(env.MEDIA_SIGNING_KEY!),{name:'HMAC',hash:'SHA-256'},false,['sign','verify']);}
+export async function signingKey(env:Env){storage(env);return crypto.subtle.importKey('raw',new TextEncoder().encode(env.MEDIA_SIGNING_KEY!),{name:'HMAC',hash:'SHA-256'},false,['sign','verify']);}
 async function asset(env:Env,id:string){const row=await env.DB.prepare("SELECT a.* FROM lesson_assets a JOIN lessons l ON l.id=a.lesson_id JOIN modules m ON m.id=l.module_id WHERE a.id=? AND m.sku='MSV-FUN-001' AND (a.kind='material' OR a.object_key=l.video_key)").bind(id).first<Asset>();if(!row)throw new HttpError(404,'Archivo no encontrado');return row;}
 export async function assetTicket(env:Env,actor:Actor,id:string){storage(env);await access(env,actor);await asset(env,id);const payload=encode(new TextEncoder().encode(JSON.stringify({id,user:actor.id,exp:Math.floor(Date.now()/1000)+300})));const signature=encode(new Uint8Array(await crypto.subtle.sign('HMAC',await signingKey(env),new TextEncoder().encode(payload))));return {url:`/api/media/${id}?ticket=${payload}.${signature}`,expiresIn:300};}
 export async function serveAsset(request:Request,env:Env,id:string){

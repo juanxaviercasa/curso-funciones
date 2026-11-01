@@ -1,3 +1,4 @@
+import {startUpload,uploadPart,finishUpload,abortUpload,externalFiles,attachExternal} from './large-media';
 import {listAssets,uploadAsset,assetTicket,serveAsset} from './media';
 import {previewImport,commitImport} from './question-import';
 import {getStructure,saveStructure,publishStructure} from './course-structure';
@@ -27,6 +28,10 @@ export async function handle(request:Request,env:Env):Promise<Response>{
   if(/^\/api\/lessons\/[-a-zA-Z0-9_]+\/assets$/.test(route)&&request.method==='GET')return json(await listAssets(env,user,route.split('/')[3]));
   if(/^\/api\/admin\/lessons\/[-a-zA-Z0-9_]+\/assets$/.test(route)&&request.method==='POST')return json(await uploadAsset(request,env,user,route.split('/')[4]));
   if(/^\/api\/assets\/[-a-zA-Z0-9_]+\/ticket$/.test(route)&&request.method==='POST')return json(await assetTicket(env,user,route.split('/')[3]));
+  if(route==='/api/admin/media/files'&&request.method==='GET')return json(await externalFiles(env,user,url.searchParams.get('cursor')||undefined));
+  if(route==='/api/admin/media/part'&&request.method==='POST')return json(await uploadPart(request,env,user));
+  if(['/api/admin/media/complete','/api/admin/media/abort'].includes(route)&&request.method==='POST'){if(user.role!=='admin')throw new HttpError(403,'No autorizado');const body=await bodyJSON(request,500000);return json(route.endsWith('/complete')?await finishUpload(env,user,body):await abortUpload(env,user,body));}
+  if(/^\/api\/admin\/lessons\/[-a-zA-Z0-9_]+\/(upload|external)$/.test(route)&&request.method==='POST'){if(user.role!=='admin')throw new HttpError(403,'No autorizado');const body=await bodyJSON(request,5000);return json(route.endsWith('/upload')?await startUpload(env,user,route.split('/')[4],body):await attachExternal(env,user,route.split('/')[4],body));}
   if(route==='/api/me'&&request.method==='GET'){
    const rights=await env.DB.prepare('SELECT sku FROM entitlements WHERE user_id=? AND active=1 GROUP BY sku').bind(user.id).all();
    const orders=await env.DB.prepare('SELECT id,status,amount_minor,currency,created_at FROM orders WHERE user_id=? ORDER BY created_at DESC LIMIT 20').bind(user.id).all();
