@@ -31,5 +31,11 @@
       "database_id": "14c6216f-dc0d-4524-836e-699fcd6f2781",
       "migrations_dir": "database/migrations"
     }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "PRIVATE_MEDIA",
+      "bucket_name": "sistema-zenit-media-private"
+    }
   ]
 }
