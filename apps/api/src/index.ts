@@ -1,3 +1,4 @@
+import {listAssets,uploadAsset,assetTicket,serveAsset} from './media';
 import {previewImport,commitImport} from './question-import';
 import {getStructure,saveStructure,publishStructure} from './course-structure';
 import {listDrafts,saveDraft} from './question-drafts';
@@ -16,12 +17,16 @@ export async function handle(request:Request,env:Env):Promise<Response>{
  if(route==='/api/webhooks/mercadopago'&&request.method==='POST')return json(await webhook(request,env));
  if(route.startsWith('/api/checkout')&&env.PAYMENTS_ENABLED!=='sandbox')throw new HttpError(503,'Integración de pagos pendiente');
  if(route==='/api/demo/answer'&&request.method==='POST'){sameOrigin(request,env);const body=await bodyJSON(request,512);return json(evaluateSample(body.answer));}
+ if(/^\/api\/media\/[-a-zA-Z0-9_]+$/.test(route)&&['GET','HEAD'].includes(request.method))return serveAsset(request,env,route.split('/')[3]);
  if(route.startsWith('/api/')){
   if(!['GET','HEAD'].includes(request.method))sameOrigin(request,env);
   const user=await requireUser(request,env);
   if(route==='/api/production-checkout'&&request.method==='POST')return json(await checkout(env,user.id,request.headers.get('Idempotency-Key'),true));
   if(route==='/api/production-checkout-preview'&&request.method==='POST')return json(await productionCheckoutPreview(env,user.id,request.headers.get('Idempotency-Key')));
   if(route==='/api/payment-method-diagnostic'&&request.method==='GET')return json(await paymentMethodDiagnostic(env,user.id));
+  if(/^\/api\/lessons\/[-a-zA-Z0-9_]+\/assets$/.test(route)&&request.method==='GET')return json(await listAssets(env,user,route.split('/')[3]));
+  if(/^\/api\/admin\/lessons\/[-a-zA-Z0-9_]+\/assets$/.test(route)&&request.method==='POST')return json(await uploadAsset(request,env,user,route.split('/')[4]));
+  if(/^\/api\/assets\/[-a-zA-Z0-9_]+\/ticket$/.test(route)&&request.method==='POST')return json(await assetTicket(env,user,route.split('/')[3]));
   if(route==='/api/me'&&request.method==='GET'){
    const rights=await env.DB.prepare('SELECT sku FROM entitlements WHERE user_id=? AND active=1 GROUP BY sku').bind(user.id).all();
    const orders=await env.DB.prepare('SELECT id,status,amount_minor,currency,created_at FROM orders WHERE user_id=? ORDER BY created_at DESC LIMIT 20').bind(user.id).all();
@@ -64,8 +69,8 @@ export async function handle(request:Request,env:Env):Promise<Response>{
 }
 export default {async fetch(request:Request,env:Env){
  let response:Response;try{response=await handle(request,env);}catch(error){response=error instanceof HttpError?json({error:error.message},error.status):json({error:'No se pudo completar la solicitud'},500);}
- const headers=new Headers(response.headers);headers.set('X-Content-Type-Options','nosniff');headers.set('Referrer-Policy','strict-origin-when-cross-origin');headers.set('Permissions-Policy','camera=(), microphone=(), geolocation=()');
- headers.set('Content-Security-Policy',"default-src 'self'; script-src 'self' https://*.clerk.accounts.dev https://*.clerk.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://img.clerk.com; connect-src 'self' https://*.clerk.accounts.dev https://*.clerk.com; frame-src https://*.clerk.accounts.dev https://*.clerk.com https://challenges.cloudflare.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'");
+ const headers=new Headers(response.headers);headers.set('X-Content-Type-Options','nosniff');if(!headers.has('Referrer-Policy'))headers.set('Referrer-Policy','strict-origin-when-cross-origin');headers.set('Permissions-Policy','camera=(), microphone=(), geolocation=()');
+ if(!headers.has('Content-Security-Policy'))headers.set('Content-Security-Policy',"default-src 'self'; script-src 'self' https://*.clerk.accounts.dev https://*.clerk.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://img.clerk.com; connect-src 'self' https://*.clerk.accounts.dev https://*.clerk.com; frame-src https://*.clerk.accounts.dev https://*.clerk.com https://challenges.cloudflare.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'");
  if(env.APP_ENV==='production')headers.set('Strict-Transport-Security','max-age=31536000');
  return new Response(response.body,{status:response.status,headers});
 }};
