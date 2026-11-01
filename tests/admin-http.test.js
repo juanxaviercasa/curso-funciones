@@ -51,3 +51,44 @@ it('HTTP guarda pregunta sin clave como privada y rechaza opción inexistente',a
  expect(db.prepare('SELECT COUNT(*) n FROM questions').get().n).toBe(6);
  expect(db.prepare('SELECT COUNT(*) n FROM admin_audit_logs').get().n).toBe(1);
 });
+
+it('publica estructura y conserva preguntas, progreso y videos; rechaza repetición obsoleta',async()=>{
+ const state=await (await request('/api/admin/course-structure')).json();
+ db.exec("INSERT INTO progress(user_id,lesson_id,completed) VALUES('student','l1',1); UPDATE lessons SET video_key='private-video' WHERE id='l1'");
+ const fresh=await (await request('/api/admin/course-structure')).json();
+ fresh.modules[0].title='Módulo actualizado';fresh.modules[0].lessons[0].title='Explicación actualizada';
+ fresh.modules[0].lessons.push({id:'new-public',title:'Nueva lección',body:'Explicación original.'});
+ expect((await request('/api/admin/course-structure',fresh)).status).toBe(200);
+ expect((await request('/api/admin/course-structure/publish',{revision:1,publishedVersion:state.publishedVersion})).status).toBe(409);
+ const publish=await request('/api/admin/course-structure/publish',{revision:1,publishedVersion:fresh.publishedVersion});expect(publish.status).toBe(200);
+ expect(db.prepare("SELECT title,video_key FROM lessons WHERE id='l1'").get()).toEqual({title:'Explicación actualizada',video_key:'private-video'});
+ expect(db.prepare("SELECT completed FROM progress WHERE user_id='student' AND lesson_id='l1'").get().completed).toBe(1);
+ expect(db.prepare('SELECT COUNT(*) n FROM questions').get().n).toBe(6);
+ expect(db.prepare("SELECT title FROM lessons WHERE id='new-public'").get().title).toBe('Nueva lección');
+ expect(db.prepare("SELECT COUNT(*) n FROM admin_audit_logs WHERE action='course.structure.publish'").get().n).toBe(1);
+ expect((await request('/api/admin/course-structure/publish',{revision:1,publishedVersion:fresh.publishedVersion})).status).toBe(409);
+});
+it('publicación rechaza borrador vacío, pérdida de lecciones y alumnos',async()=>{
+ let state=await (await request('/api/admin/course-structure')).json();state.modules[0].lessons[0].body='';
+ await request('/api/admin/course-structure',state);
+ expect((await request('/api/admin/course-structure/publish',{revision:1,publishedVersion:state.publishedVersion})).status).toBe(400);
+ state=await (await request('/api/admin/course-structure')).json();state.modules[0].lessons.shift();await request('/api/admin/course-structure',state);
+ expect((await request('/api/admin/course-structure/publish',{revision:2,publishedVersion:state.publishedVersion})).status).toBe(400);
+ vi.mocked(requireUser).mockResolvedValue({id:'student',role:'student'});
+ expect((await request('/api/admin/course-structure/publish',{revision:2,publishedVersion:state.publishedVersion})).status).toBe(403);
+ expect(db.prepare("SELECT COUNT(*) n FROM admin_audit_logs WHERE action='course.structure.publish'").get().n).toBe(0);
+});
+it('publicación detecta edición concurrente dentro del lote y no publica parcialmente',async()=>{
+ const state=await (await request('/api/admin/course-structure')).json();state.modules[0].lessons[0].title='No debe publicarse';await request('/api/admin/course-structure',state);
+ const batch=env.DB.batch;env.DB.batch=async statements=>{db.exec("UPDATE lessons SET body='Cambio concurrente' WHERE id='l1'");return batch(statements);};
+ expect((await request('/api/admin/course-structure/publish',{revision:1,publishedVersion:state.publishedVersion})).status).toBe(409);
+ expect(db.prepare("SELECT title FROM lessons WHERE id='l1'").get().title).not.toBe('No debe publicarse');
+ expect(db.prepare("SELECT COUNT(*) n FROM admin_audit_logs WHERE action='course.structure.publish'").get().n).toBe(0);
+});
+it('un fallo al publicar revierte temario y auditoría juntos',async()=>{
+ const state=await (await request('/api/admin/course-structure')).json();const before=db.prepare('SELECT * FROM lessons ORDER BY id').all();state.modules[0].lessons[0].title='Cambio fallido';await request('/api/admin/course-structure',state);
+ const batch=env.DB.batch;env.DB.batch=statements=>batch([...statements,new Statement('INSERT INTO tabla_inexistente VALUES(1)')]);
+ expect((await request('/api/admin/course-structure/publish',{revision:1,publishedVersion:state.publishedVersion})).status).toBe(500);
+ expect(db.prepare('SELECT * FROM lessons ORDER BY id').all()).toEqual(before);
+ expect(db.prepare("SELECT COUNT(*) n FROM admin_audit_logs WHERE action='course.structure.publish'").get().n).toBe(0);
+});

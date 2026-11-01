@@ -1,5 +1,5 @@
 import {previewImport,commitImport} from './question-import';
-import {getStructure,saveStructure} from './course-structure';
+import {getStructure,saveStructure,publishStructure} from './course-structure';
 import {listDrafts,saveDraft} from './question-drafts';
 import {adminLessons,saveLesson} from './admin';
 import {PRODUCT} from '../../../packages/shared/product';
@@ -38,6 +38,7 @@ export async function handle(request:Request,env:Env):Promise<Response>{
    const body=await bodyJSON(request,300000);
    return json(route.endsWith('/preview')?await previewImport(env,user,body):await commitImport(env,user,body));
   }
+  if(route==='/api/admin/course-structure/publish'&&request.method==='POST'){if(user.role!=='admin')throw new HttpError(403,'No autorizado');return json(await publishStructure(env,user,await bodyJSON(request,2000)));}
   if(route==='/api/admin/course-structure'&&request.method==='GET')return json(await getStructure(env,user));
   if(route==='/api/admin/course-structure'&&request.method==='POST'){
    if(user.role!=='admin')throw new HttpError(403,'No autorizado');
