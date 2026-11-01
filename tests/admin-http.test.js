@@ -1,3 +1,4 @@
+// Fixed-length stream adapter for the Node test runtime; production uses Workers' native implementation.
 import {DatabaseSync} from 'node:sqlite';
 import {readFileSync} from 'node:fs';
 import {beforeEach,afterEach,it,expect,vi} from 'vitest';
@@ -6,6 +7,8 @@ vi.mock('../apps/api/src/auth',()=>({requireUser:vi.fn(),requireEntitlement:vi.f
 import {requireUser,requireEntitlement} from '../apps/api/src/auth';
 import worker from '../apps/api/src/index';
 let db,env;
+class TestFixedLengthStream extends TransformStream{constructor(size){let total=0;super({transform(chunk,c){total+=chunk.length;if(total>size)throw Error('length');c.enqueue(chunk);},flush(){if(total!==size)throw Error('length');}});}}
+
 class Statement{
  constructor(sql,args=[]){this.sql=sql;this.args=args;}
  bind(...args){return new Statement(this.sql,args);}
@@ -14,6 +17,7 @@ class Statement{
  async run(){return db.prepare(this.sql).run(...this.args);}
 }
 beforeEach(()=>{
+ vi.stubGlobal('FixedLengthStream',TestFixedLengthStream);
  db=new DatabaseSync(':memory:');
  for(const name of ['0001_initial.sql','0002_training.sql','0003_orders_api.sql','0004_payment_environment.sql','0005_question_drafts.sql','0006_course_structure_drafts.sql','0008_lesson_assets.sql'])db.exec(readFileSync('database/migrations/'+name,'utf8'));
  db.exec("INSERT INTO users(id,auth_subject,email,role) VALUES('admin','fixture-admin','admin@example.test','admin'),('student','fixture-student','student@example.test','student')");
@@ -92,8 +96,8 @@ it('un fallo al publicar revierte temario y auditoría juntos',async()=>{
  expect(db.prepare('SELECT * FROM lessons ORDER BY id').all()).toEqual(before);
  expect(db.prepare("SELECT COUNT(*) n FROM admin_audit_logs WHERE action='course.structure.publish'").get().n).toBe(0);
 });
-function mediaStorage(){const objects=new Map();env.MEDIA_ENABLED='true';env.MEDIA_SIGNING_KEY='fixture-only-signing-key-with-more-than-32-bytes';env.PRIVATE_MEDIA={put:async(key,value)=>{objects.set(key,new Uint8Array(value));},delete:async key=>objects.delete(key),head:async key=>objects.has(key)?{size:objects.get(key).length}:null,get:async(key,options)=>{const b=objects.get(key);if(!b)return null;return {body:new Blob([b.slice(options.range.offset,options.range.offset+options.range.length)]).stream(),arrayBuffer:async()=>b.slice(options.range.offset,options.range.offset+options.range.length).buffer};}};return objects;}
-function uploadFixture(kind='video',name='clase.mp4',bytes=new Uint8Array([0,0,0,16,102,116,121,112,105,115,111,109,0,0,0,0])){return worker.fetch(new Request(env.APP_ORIGIN+'/api/admin/lessons/l1/assets?kind='+kind+'&name='+encodeURIComponent(name),{method:'POST',headers:{Origin:env.APP_ORIGIN,Authorization:'Bearer fixture'},body:bytes}),env);}
+function mediaStorage(){const objects=new Map();env.MEDIA_ENABLED='true';env.MEDIA_SIGNING_KEY='fixture-only-signing-key-with-more-than-32-bytes';env.PRIVATE_MEDIA={put:async(key,value)=>{objects.set(key,value instanceof ReadableStream?new Uint8Array(await new Response(value).arrayBuffer()):new Uint8Array(value));},delete:async key=>objects.delete(key),head:async key=>objects.has(key)?{size:objects.get(key).length}:null,get:async(key,options)=>{const b=objects.get(key);if(!b)return null;return {body:new Blob([b.slice(options.range.offset,options.range.offset+options.range.length)]).stream(),arrayBuffer:async()=>b.slice(options.range.offset,options.range.offset+options.range.length).buffer};}};return objects;}
+function uploadFixture(kind='video',name='clase.mp4',bytes=new Uint8Array([0,0,0,16,102,116,121,112,105,115,111,109,0,0,0,0])){return worker.fetch(new Request(env.APP_ORIGIN+'/api/admin/lessons/l1/assets?kind='+kind+'&name='+encodeURIComponent(name),{method:'POST',headers:{Origin:env.APP_ORIGIN,Authorization:'Bearer fixture','Content-Length':String(bytes.length)},body:bytes}),env);}
 it('medios desactivados no consultan almacenamiento; alumnos no pueden subir',async()=>{
  expect(await (await request('/api/lessons/l1/assets')).json()).toEqual({enabled:false,assets:[]});
  expect((await uploadFixture()).status).toBe(503);
@@ -159,4 +163,9 @@ it('Cyberduck lista solo incoming y asocia MP4 existente con etag verificado',as
  expect(db.prepare("SELECT video_key FROM lessons WHERE id='l1'").get().video_key).toBe('incoming/clase.mp4');
  expect((await request('/api/admin/lessons/l2/external',{key:'incoming/clase.mp4',etag:'etag-incoming/clase.mp4'})).status).toBe(409);
  expect(storage.objects.size).toBe(2);
+});
+it('subida normal acepta más de32MiB y rechaza sobre100MB antes de guardar',async()=>{
+ const objects=mediaStorage();const bytes=new Uint8Array(33*1024*1024);bytes.set(new TextEncoder().encode('ftyp'),4);
+ const uploaded=await uploadFixture('video','clase-grande.mp4',bytes);expect(uploaded.status).toBe(200);expect([...objects.values()][0].length).toBe(bytes.length);
+ const oversized=await worker.fetch(new Request(env.APP_ORIGIN+'/api/admin/lessons/l1/assets?kind=video&name=grande.mp4',{method:'POST',headers:{Origin:env.APP_ORIGIN,Authorization:'Bearer fixture','Content-Length':'100000001'},body:new Uint8Array(16)}),env);expect(oversized.status).toBe(413);expect(objects.size).toBe(1);
 });

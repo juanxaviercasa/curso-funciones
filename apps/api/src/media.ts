@@ -10,15 +10,19 @@ export async function listAssets(env:Env,actor:Actor,id:string){await access(env
 export async function uploadAsset(request:Request,env:Env,actor:Actor,id:string){
  requireAdmin(actor);const bucket=storage(env),l=await lesson(env,id),url=new URL(request.url),kind=url.searchParams.get('kind'),name=url.searchParams.get('name')||'';
  if(!['video','material'].includes(kind||'')||!name||name.length>160||/[\x00-\x1f\/\\]/.test(name)||!(kind==='video'?/\.mp4$/i:/\.pdf$/i).test(name))throw new HttpError(400,'Selecciona un MP4 o un PDF con nombre válido');
- const max=kind==='video'?32*1024*1024:10*1024*1024;
- const length=Number(request.headers.get('Content-Length'));if(length>max)throw new HttpError(413,'Archivo demasiado grande');
+ const max=kind==='video'?100000000:10*1024*1024;
+ const length=Number(request.headers.get('Content-Length'));if(length>max)throw new HttpError(413,'Archivo demasiado grande');if(!Number.isSafeInteger(length)||length<12)throw new HttpError(411,'Se requiere el tamaño del archivo');
  if(kind==='material'){const count=await env.DB.prepare("SELECT COUNT(*) n FROM lesson_assets WHERE lesson_id=? AND kind='material'").bind(id).first<{n:number}>();if((count?.n||0)>=20)throw new HttpError(400,'Máximo 20 materiales por lección');}
- const reader=request.body?.getReader();if(!reader)throw new HttpError(400,'Falta el archivo');const chunks:Uint8Array[]=[];let size=0;
- while(true){const {done,value}=await reader.read();if(done)break;size+=value.length;if(size>max){await reader.cancel();throw new HttpError(413,'Archivo demasiado grande');}chunks.push(value);}
- if(size<12)throw new HttpError(400,'Archivo vacío o incompleto');const bytes=new Uint8Array(size);let pos=0;for(const chunk of chunks){bytes.set(chunk,pos);pos+=chunk.length;}
- const signature=new TextDecoder().decode(bytes.slice(kind==='video'?4:0,kind==='video'?8:5));if(signature!==(kind==='video'?'ftyp':'%PDF-'))throw new HttpError(400,'El contenido no corresponde al formato indicado');
+ const reader=request.body?.getReader();if(!reader)throw new HttpError(400,'Falta el archivo');
+ // Inspect only the header. Stream the remainder to R2 without buffering the video.
+ const prefix:Uint8Array[]=[];let prefixSize=0;
+ while(prefixSize<12){const r=await reader.read();if(r.done)throw new HttpError(400,'Archivo vacío o incompleto');prefix.push(r.value);prefixSize+=r.value.length;if(prefixSize>max){await reader.cancel();throw new HttpError(413,'Archivo demasiado grande');}}
+ const header=new Uint8Array(12);let copied=0;for(const c of prefix){const take=Math.min(12-copied,c.length);header.set(c.subarray(0,take),copied);copied+=take;if(copied===12)break;}
+ if(new TextDecoder().decode(header.slice(kind==='video'?4:0,kind==='video'?8:5))!==(kind==='video'?'ftyp':'%PDF-')){await reader.cancel();throw new HttpError(400,'El contenido no corresponde al formato indicado');}
+ let size=prefixSize;let index=0;
+ const stream=new ReadableStream<Uint8Array>({async pull(controller){try{if(index<prefix.length){controller.enqueue(prefix[index++]);return;}const r=await reader.read();if(r.done){controller.close();return;}size+=r.value.length;if(size>max){await reader.cancel();controller.error(new HttpError(413,'Archivo demasiado grande'));return;}controller.enqueue(r.value);}catch(e){controller.error(e);}},cancel:reason=>reader.cancel(reason)});
  const assetId=crypto.randomUUID(),key=`lessons/${id}/${assetId}`,audit=crypto.randomUUID(),created=new Date().toISOString();
- await bucket.put(key,bytes,{httpMetadata:{contentType:kind==='video'?'video/mp4':'application/pdf'}});
+ const fixed=new FixedLengthStream(length);await Promise.all([stream.pipeTo(fixed.writable),bucket.put(key,fixed.readable,{httpMetadata:{contentType:kind==='video'?'video/mp4':'application/pdf'}})]);
  try{
   await env.DB.batch([
    env.DB.prepare("INSERT INTO admin_audit_logs(id,actor_id,action,resource_id,context_json) SELECT ?,?,'lesson.asset.upload',?,? WHERE EXISTS(SELECT 1 FROM lessons WHERE id=? AND video_key IS ?) AND (?='video' OR (SELECT COUNT(*) FROM lesson_assets WHERE lesson_id=? AND kind='material')<20)").bind(audit,actor.id,id,JSON.stringify({assetId,kind,filename:name}),id,l.video_key,kind,id),
