@@ -27,3 +27,4 @@ button:disabled{box-shadow:none;background:#e0e7f2}
 .laboratory-page{padding:40px 0}.laboratory-page>.button{margin-top:24px}.laboratory-page .zenit-lab-header{display:block;padding:0;border:0}.laboratory-page .zenit-lab-root{scroll-margin-top:24px}
 
 .import-text{display:block;width:100%;padding:12px;margin:12px 0;font:inherit;border:1px solid #bccfe8;border-radius:6px}
+.laboratory-nav{display:flex;flex-wrap:wrap;gap:12px;margin:24px 0}.laboratory-nav a{padding:12px 18px;border:1px solid #bccfe8;border-radius:8px}.laboratory-nav a[aria-current=page]{background:#102c59;color:#fff}
